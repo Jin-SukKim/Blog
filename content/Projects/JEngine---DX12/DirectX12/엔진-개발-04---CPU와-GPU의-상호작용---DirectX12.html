@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr"><head><title>엔진 개발 04 - CPU와 GPU의 상호작용 - DirectX12</title><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted Grotesk:wght@400;700&amp;family=Source Sans Pro:ital,wght@0,400;0,600;1,400;1,600&amp;family=IBM Plex Mono:wght@400;600&amp;display=swap"/><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="og:site_name" content="JEngine"/><meta property="og:title" content="엔진 개발 04 - CPU와 GPU의 상호작용 - DirectX12"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="엔진 개발 04 - CPU와 GPU의 상호작용 - DirectX12"/><meta name="twitter:description" content="CPU와 GPU를 모두 사용해 최적의 성능을 얻으려면 병렬로 사용하지만 중간중간 동기화도 필요함 이때 동기화는 병렬성을 망치기에 최소화해야 함 Command Queue와 Command List GPU에는 Command Queue가 있고 CPU는 렌더링 Command들을 Command List를 만들어 API를 통해 Queue에 제출함 중요한 점은 이 명령들을 GPU가 즉시 실행하는건 아니고 처리할 준비가 되어야지 실행되기 시작함 즉, GPU가 이전에 제출된 명령들을 처리하느라 바쁘면 명령들은 Queue에 그냥 남아있음 CPU가 명..."/><meta property="og:description" content="CPU와 GPU를 모두 사용해 최적의 성능을 얻으려면 병렬로 사용하지만 중간중간 동기화도 필요함 이때 동기화는 병렬성을 망치기에 최소화해야 함 Command Queue와 Command List GPU에는 Command Queue가 있고 CPU는 렌더링 Command들을 Command List를 만들어 API를 통해 Queue에 제출함 중요한 점은 이 명령들을 GPU가 즉시 실행하는건 아니고 처리할 준비가 되어야지 실행되기 시작함 즉, GPU가 이전에 제출된 명령들을 처리하느라 바쁘면 명령들은 Queue에 그냥 남아있음 CPU가 명..."/><meta property="og:image:alt" content="CPU와 GPU를 모두 사용해 최적의 성능을 얻으려면 병렬로 사용하지만 중간중간 동기화도 필요함 이때 동기화는 병렬성을 망치기에 최소화해야 함 Command Queue와 Command List GPU에는 Command Queue가 있고 CPU는 렌더링 Command들을 Command List를 만들어 API를 통해 Queue에 제출함 중요한 점은 이 명령들을 GPU가 즉시 실행하는건 아니고 처리할 준비가 되어야지 실행되기 시작함 즉, GPU가 이전에 제출된 명령들을 처리하느라 바쁘면 명령들은 Queue에 그냥 남아있음 CPU가 명..."/><meta property="twitter:domain" content="jin-sukkim.github.io/Blog"/><meta property="og:url" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-04---CPU와-GPU의-상호작용---DirectX12"/><meta property="twitter:url" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-04---CPU와-GPU의-상호작용---DirectX12"/><link rel="icon" href="../../../../static/icon.png"/><meta name="description" content="CPU와 GPU를 모두 사용해 최적의 성능을 얻으려면 병렬로 사용하지만 중간중간 동기화도 필요함 이때 동기화는 병렬성을 망치기에 최소화해야 함 Command Queue와 Command List GPU에는 Command Queue가 있고 CPU는 렌더링 Command들을 Command List를 만들어 API를 통해 Queue에 제출함 중요한 점은 이 명령들을 GPU가 즉시 실행하는건 아니고 처리할 준비가 되어야지 실행되기 시작함 즉, GPU가 이전에 제출된 명령들을 처리하느라 바쁘면 명령들은 Queue에 그냥 남아있음 CPU가 명..."/><meta name="generator" content="Quartz"/><link href="../../../../index.css" rel="stylesheet" type="text/css" spa-preserve/><style>.expand-button {
+  position: absolute;
+  display: flex;
+  float: right;
+  padding: 0.4rem;
+  margin: 0.3rem;
+  right: 0;
+  color: var(--gray);
+  border-color: var(--dark);
+  background-color: var(--light);
+  border: 1px solid;
+  border-radius: 5px;
+  opacity: 0;
+  transition: 0.2s;
+}
+.expand-button > svg {
+  fill: var(--light);
+  filter: contrast(0.3);
+}
+.expand-button:hover {
+  cursor: pointer;
+  border-color: var(--secondary);
+}
+.expand-button:focus {
+  outline: 0;
+}
+
+pre:hover > .expand-button {
+  opacity: 1;
+  transition: 0.2s;
+}
+
+#mermaid-container {
+  position: fixed;
+  contain: layout;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: none;
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+}
+#mermaid-container.active {
+  display: inline-block;
+}
+#mermaid-container > #mermaid-space {
+  border: 1px solid var(--lightgray);
+  background-color: var(--light);
+  border-radius: 5px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 80vh;
+  width: 80vw;
+  overflow: hidden;
+}
+#mermaid-container > #mermaid-space > .mermaid-content {
+  padding: 2rem;
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform 0.1s ease;
+  overflow: visible;
+  min-height: 200px;
+  min-width: 200px;
+}
+#mermaid-container > #mermaid-space > .mermaid-content pre {
+  margin: 0;
+  border: none;
+}
+#mermaid-container > #mermaid-space > .mermaid-content svg {
+  max-width: none;
+  height: auto;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--lightgray);
+  background: var(--light);
+  color: var(--dark);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: var(--bodyFont);
+  transition: all 0.2s ease;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:hover {
+  background: var(--lightgray);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:active {
+  transform: translateY(1px);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:nth-child(2) {
+  width: auto;
+  padding: 0 12px;
+  font-size: 14px;
+}
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VSb290IjoiL2hvbWUvcnVubmVyL3dvcmsvT2JzaWRpYW5Ob3RlL09ic2lkaWFuTm90ZS9xdWFydHovcXVhcnR6L2NvbXBvbmVudHMvc3R5bGVzIiwic291cmNlcyI6WyJtZXJtYWlkLmlubGluZS5zY3NzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTtFQUNBOztBQUdGO0VBQ0U7RUFDQTs7QUFHRjtFQUNFOzs7QUFLRjtFQUNFO0VBQ0E7OztBQUlKO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFOztBQUdGO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFO0VBQ0E7O0FBR0Y7RUFDRTtFQUNBOztBQUlKO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTs7QUFHRjtFQUNFOztBQUlGO0VBQ0U7RUFDQTtFQUNBIiwic291cmNlc0NvbnRlbnQiOlsiLmV4cGFuZC1idXR0b24ge1xuICBwb3NpdGlvbjogYWJzb2x1dGU7XG4gIGRpc3BsYXk6IGZsZXg7XG4gIGZsb2F0OiByaWdodDtcbiAgcGFkZGluZzogMC40cmVtO1xuICBtYXJnaW46IDAuM3JlbTtcbiAgcmlnaHQ6IDA7IC8vIE5PVEU6IHJpZ2h0IHdpbGwgYmUgc2V0IGluIG1lcm1haWQuaW5saW5lLnRzXG4gIGNvbG9yOiB2YXIoLS1ncmF5KTtcbiAgYm9yZGVyLWNvbG9yOiB2YXIoLS1kYXJrKTtcbiAgYmFja2dyb3VuZC1jb2xvcjogdmFyKC0tbGlnaHQpO1xuICBib3JkZXI6IDFweCBzb2xpZDtcbiAgYm9yZGVyLXJhZGl1czogNXB4O1xuICBvcGFjaXR5OiAwO1xuICB0cmFuc2l0aW9uOiAwLjJzO1xuXG4gICYgPiBzdmcge1xuICAgIGZpbGw6IHZhcigtLWxpZ2h0KTtcbiAgICBmaWx0ZXI6IGNvbnRyYXN0KDAuMyk7XG4gIH1cblxuICAmOmhvdmVyIHtcbiAgICBjdXJzb3I6IHBvaW50ZXI7XG4gICAgYm9yZGVyLWNvbG9yOiB2YXIoLS1zZWNvbmRhcnkpO1xuICB9XG5cbiAgJjpmb2N1cyB7XG4gICAgb3V0bGluZTogMDtcbiAgfVxufVxuXG5wcmUge1xuICAmOmhvdmVyID4gLmV4cGFuZC1idXR0b24ge1xuICAgIG9wYWNpdHk6IDE7XG4gICAgdHJhbnNpdGlvbjogMC4ycztcbiAgfVxufVxuXG4jbWVybWFpZC1jb250YWluZXIge1xuICBwb3NpdGlvbjogZml4ZWQ7XG4gIGNvbnRhaW46IGxheW91dDtcbiAgei1pbmRleDogOTk5O1xuICBsZWZ0OiAwO1xuICB0b3A6IDA7XG4gIHdpZHRoOiAxMDB2dztcbiAgaGVpZ2h0OiAxMDB2aDtcbiAgb3ZlcmZsb3c6IGhpZGRlbjtcbiAgZGlzcGxheTogbm9uZTtcbiAgYmFja2Ryb3AtZmlsdGVyOiBibHVyKDRweCk7XG4gIGJhY2tncm91bmQ6IHJnYmEoMCwgMCwgMCwgMC41KTtcblxuICAmLmFjdGl2ZSB7XG4gICAgZGlzcGxheTogaW5saW5lLWJsb2NrO1xuICB9XG5cbiAgJiA+ICNtZXJtYWlkLXNwYWNlIHtcbiAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1saWdodGdyYXkpO1xuICAgIGJhY2tncm91bmQtY29sb3I6IHZhcigtLWxpZ2h0KTtcbiAgICBib3JkZXItcmFkaXVzOiA1cHg7XG4gICAgcG9zaXRpb246IGZpeGVkO1xuICAgIHRvcDogNTAlO1xuICAgIGxlZnQ6IDUwJTtcbiAgICB0cmFuc2Zvcm06IHRyYW5zbGF0ZSgtNTAlLCAtNTAlKTtcbiAgICBoZWlnaHQ6IDgwdmg7XG4gICAgd2lkdGg6IDgwdnc7XG4gICAgb3ZlcmZsb3c6IGhpZGRlbjtcblxuICAgICYgPiAubWVybWFpZC1jb250ZW50IHtcbiAgICAgIHBhZGRpbmc6IDJyZW07XG4gICAgICBwb3NpdGlvbjogcmVsYXRpdmU7XG4gICAgICB0cmFuc2Zvcm0tb3JpZ2luOiAwIDA7XG4gICAgICB0cmFuc2l0aW9uOiB0cmFuc2Zvcm0gMC4xcyBlYXNlO1xuICAgICAgb3ZlcmZsb3c6IHZpc2libGU7XG4gICAgICBtaW4taGVpZ2h0OiAyMDBweDtcbiAgICAgIG1pbi13aWR0aDogMjAwcHg7XG5cbiAgICAgIHByZSB7XG4gICAgICAgIG1hcmdpbjogMDtcbiAgICAgICAgYm9yZGVyOiBub25lO1xuICAgICAgfVxuXG4gICAgICBzdmcge1xuICAgICAgICBtYXgtd2lkdGg6IG5vbmU7XG4gICAgICAgIGhlaWdodDogYXV0bztcbiAgICAgIH1cbiAgICB9XG5cbiAgICAmID4gLm1lcm1haWQtY29udHJvbHMge1xuICAgICAgcG9zaXRpb246IGFic29sdXRlO1xuICAgICAgYm90dG9tOiAyMHB4O1xuICAgICAgcmlnaHQ6IDIwcHg7XG4gICAgICBkaXNwbGF5OiBmbGV4O1xuICAgICAgZ2FwOiA4cHg7XG4gICAgICBwYWRkaW5nOiA4cHg7XG4gICAgICBiYWNrZ3JvdW5kOiB2YXIoLS1saWdodCk7XG4gICAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1saWdodGdyYXkpO1xuICAgICAgYm9yZGVyLXJhZGl1czogNnB4O1xuICAgICAgYm94LXNoYWRvdzogMCAycHggNHB4IHJnYmEoMCwgMCwgMCwgMC4xKTtcbiAgICAgIHotaW5kZXg6IDI7XG5cbiAgICAgIC5tZXJtYWlkLWNvbnRyb2wtYnV0dG9uIHtcbiAgICAgICAgZGlzcGxheTogZmxleDtcbiAgICAgICAgYWxpZ24taXRlbXM6IGNlbnRlcjtcbiAgICAgICAganVzdGlmeS1jb250ZW50OiBjZW50ZXI7XG4gICAgICAgIHdpZHRoOiAzMnB4O1xuICAgICAgICBoZWlnaHQ6IDMycHg7XG4gICAgICAgIHBhZGRpbmc6IDA7XG4gICAgICAgIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpZ2h0Z3JheSk7XG4gICAgICAgIGJhY2tncm91bmQ6IHZhcigtLWxpZ2h0KTtcbiAgICAgICAgY29sb3I6IHZhcigtLWRhcmspO1xuICAgICAgICBib3JkZXItcmFkaXVzOiA0cHg7XG4gICAgICAgIGN1cnNvcjogcG9pbnRlcjtcbiAgICAgICAgZm9udC1zaXplOiAxNnB4O1xuICAgICAgICBmb250LWZhbWlseTogdmFyKC0tYm9keUZvbnQpO1xuICAgICAgICB0cmFuc2l0aW9uOiBhbGwgMC4ycyBlYXNlO1xuXG4gICAgICAgICY6aG92ZXIge1xuICAgICAgICAgIGJhY2tncm91bmQ6IHZhcigtLWxpZ2h0Z3JheSk7XG4gICAgICAgIH1cblxuICAgICAgICAmOmFjdGl2ZSB7XG4gICAgICAgICAgdHJhbnNmb3JtOiB0cmFuc2xhdGVZKDFweCk7XG4gICAgICAgIH1cblxuICAgICAgICAvLyBTdHlsZSB0aGUgcmVzZXQgYnV0dG9uIGRpZmZlcmVudGx5XG4gICAgICAgICY6bnRoLWNoaWxkKDIpIHtcbiAgICAgICAgICB3aWR0aDogYXV0bztcbiAgICAgICAgICBwYWRkaW5nOiAwIDEycHg7XG4gICAgICAgICAgZm9udC1zaXplOiAxNHB4O1xuICAgICAgICB9XG4gICAgICB9XG4gICAgfVxuICB9XG59XG4iXX0= */</style><link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" type="text/css" spa-preserve/><script src="../../../../prescript.js" type="application/javascript" spa-preserve></script><script type="application/javascript" spa-preserve>const fetchData = fetch("../../../../static/contentIndex.json").then(data => data.json())</script><link rel="alternate" type="application/rss+xml" title="RSS Feed" href="https://jin-sukkim.github.io/Blog/index.xml"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta property="og:image" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-04---CPU와-GPU의-상호작용---DirectX12-og-image.webp"/><meta property="og:image:url" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-04---CPU와-GPU의-상호작용---DirectX12-og-image.webp"/><meta name="twitter:image" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-04---CPU와-GPU의-상호작용---DirectX12-og-image.webp"/><meta property="og:image:type" content="image/.webp"/></head><body data-slug="content/Projects/JEngine---DX12/DirectX12/엔진-개발-04---CPU와-GPU의-상호작용---DirectX12"><div id="quartz-root" class="page"><div id="quartz-body"><div class="left sidebar"><h2 class="page-title"><a href="../../../..">JEngine</a></h2><div class="spacer mobile-only"></div><div class="flex-component" style="flex-direction: row; flex-wrap: nowrap; gap: 1rem;"><div style="flex-grow: 1; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><div class="search"><button class="search-button"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7"><title>Search</title><g class="search-path" fill="none"><path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"></path><circle cx="8" cy="8" r="7"></circle></g></svg><p>Search</p></button><div class="search-container"><div class="search-space"><input autocomplete="off" class="search-bar" name="search" type="text" aria-label="Search for something" placeholder="Search for something"/><div class="search-layout" data-preview="true"></div></div></div></div></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="darkmode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="dayIcon" x="0px" y="0px" viewBox="0 0 35 35" style="enable-background:new 0 0 35 35" xml:space="preserve" aria-label="Dark mode"><title>Dark mode</title><path d="M6,17.5C6,16.672,5.328,16,4.5,16h-3C0.672,16,0,16.672,0,17.5    S0.672,19,1.5,19h3C5.328,19,6,18.328,6,17.5z M7.5,26c-0.414,0-0.789,0.168-1.061,0.439l-2,2C4.168,28.711,4,29.086,4,29.5    C4,30.328,4.671,31,5.5,31c0.414,0,0.789-0.168,1.06-0.44l2-2C8.832,28.289,9,27.914,9,27.5C9,26.672,8.329,26,7.5,26z M17.5,6    C18.329,6,19,5.328,19,4.5v-3C19,0.672,18.329,0,17.5,0S16,0.672,16,1.5v3C16,5.328,16.671,6,17.5,6z M27.5,9    c0.414,0,0.789-0.168,1.06-0.439l2-2C30.832,6.289,31,5.914,31,5.5C31,4.672,30.329,4,29.5,4c-0.414,0-0.789,0.168-1.061,0.44    l-2,2C26.168,6.711,26,7.086,26,7.5C26,8.328,26.671,9,27.5,9z M6.439,8.561C6.711,8.832,7.086,9,7.5,9C8.328,9,9,8.328,9,7.5    c0-0.414-0.168-0.789-0.439-1.061l-2-2C6.289,4.168,5.914,4,5.5,4C4.672,4,4,4.672,4,5.5c0,0.414,0.168,0.789,0.439,1.06    L6.439,8.561z M33.5,16h-3c-0.828,0-1.5,0.672-1.5,1.5s0.672,1.5,1.5,1.5h3c0.828,0,1.5-0.672,1.5-1.5S34.328,16,33.5,16z     M28.561,26.439C28.289,26.168,27.914,26,27.5,26c-0.828,0-1.5,0.672-1.5,1.5c0,0.414,0.168,0.789,0.439,1.06l2,2    C28.711,30.832,29.086,31,29.5,31c0.828,0,1.5-0.672,1.5-1.5c0-0.414-0.168-0.789-0.439-1.061L28.561,26.439z M17.5,29    c-0.829,0-1.5,0.672-1.5,1.5v3c0,0.828,0.671,1.5,1.5,1.5s1.5-0.672,1.5-1.5v-3C19,29.672,18.329,29,17.5,29z M17.5,7    C11.71,7,7,11.71,7,17.5S11.71,28,17.5,28S28,23.29,28,17.5S23.29,7,17.5,7z M17.5,25c-4.136,0-7.5-3.364-7.5-7.5    c0-4.136,3.364-7.5,7.5-7.5c4.136,0,7.5,3.364,7.5,7.5C25,21.636,21.636,25,17.5,25z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="nightIcon" x="0px" y="0px" viewBox="0 0 100 100" style="enable-background:new 0 0 100 100" xml:space="preserve" aria-label="Light mode"><title>Light mode</title><path d="M96.76,66.458c-0.853-0.852-2.15-1.064-3.23-0.534c-6.063,2.991-12.858,4.571-19.655,4.571  C62.022,70.495,50.88,65.88,42.5,57.5C29.043,44.043,25.658,23.536,34.076,6.47c0.532-1.08,0.318-2.379-0.534-3.23  c-0.851-0.852-2.15-1.064-3.23-0.534c-4.918,2.427-9.375,5.619-13.246,9.491c-9.447,9.447-14.65,22.008-14.65,35.369  c0,13.36,5.203,25.921,14.65,35.368s22.008,14.65,35.368,14.65c13.361,0,25.921-5.203,35.369-14.65  c3.872-3.871,7.064-8.328,9.491-13.246C97.826,68.608,97.611,67.309,96.76,66.458z"></path></svg></button></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="readermode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="readerIcon" fill="currentColor" stroke="currentColor" stroke-width="0.2" stroke-linecap="round" stroke-linejoin="round" width="64px" height="64px" viewBox="0 0 24 24" aria-label="Reader mode"><title>Reader mode</title><g transform="translate(-1.8, -1.8) scale(1.15, 1.2)"><path d="M8.9891247,2.5 C10.1384702,2.5 11.2209868,2.96705384 12.0049645,3.76669482 C12.7883914,2.96705384 13.8709081,2.5 15.0202536,2.5 L18.7549359,2.5 C19.1691495,2.5 19.5049359,2.83578644 19.5049359,3.25 L19.5046891,4.004 L21.2546891,4.00457396 C21.6343849,4.00457396 21.9481801,4.28672784 21.9978425,4.6528034 L22.0046891,4.75457396 L22.0046891,20.25 C22.0046891,20.6296958 21.7225353,20.943491 21.3564597,20.9931534 L21.2546891,21 L2.75468914,21 C2.37499337,21 2.06119817,20.7178461 2.01153575,20.3517706 L2.00468914,20.25 L2.00468914,4.75457396 C2.00468914,4.37487819 2.28684302,4.061083 2.65291858,4.01142057 L2.75468914,4.00457396 L4.50368914,4.004 L4.50444233,3.25 C4.50444233,2.87030423 4.78659621,2.55650904 5.15267177,2.50684662 L5.25444233,2.5 L8.9891247,2.5 Z M4.50368914,5.504 L3.50468914,5.504 L3.50468914,19.5 L10.9478955,19.4998273 C10.4513189,18.9207296 9.73864328,18.5588115 8.96709342,18.5065584 L8.77307039,18.5 L5.25444233,18.5 C4.87474657,18.5 4.56095137,18.2178461 4.51128895,17.8517706 L4.50444233,17.75 L4.50368914,5.504 Z M19.5049359,17.75 C19.5049359,18.1642136 19.1691495,18.5 18.7549359,18.5 L15.2363079,18.5 C14.3910149,18.5 13.5994408,18.8724714 13.0614828,19.4998273 L20.5046891,19.5 L20.5046891,5.504 L19.5046891,5.504 L19.5049359,17.75 Z M18.0059359,3.999 L15.0202536,4 L14.8259077,4.00692283 C13.9889509,4.06666544 13.2254227,4.50975805 12.7549359,5.212 L12.7549359,17.777 L12.7782651,17.7601316 C13.4923805,17.2719483 14.3447024,17 15.2363079,17 L18.0059359,16.999 L18.0056891,4.798 L18.0033792,4.75457396 L18.0056891,4.71 L18.0059359,3.999 Z M8.9891247,4 L6.00368914,3.999 L6.00599909,4.75457396 L6.00599909,4.75457396 L6.00368914,4.783 L6.00368914,16.999 L8.77307039,17 C9.57551536,17 10.3461406,17.2202781 11.0128313,17.6202194 L11.2536891,17.776 L11.2536891,5.211 C10.8200889,4.56369974 10.1361548,4.13636104 9.37521067,4.02745763 L9.18347055,4.00692283 L8.9891247,4 Z"></path></g></svg></button></div></div><div class="explorer" data-behavior="link" data-collapsed="collapsed" data-savestate="true" data-data-fns="{&quot;order&quot;:[&quot;filter&quot;,&quot;map&quot;,&quot;sort&quot;],&quot;sortFn&quot;:&quot;(a,b)=>!a.isFolder&amp;&amp;!b.isFolder||a.isFolder&amp;&amp;b.isFolder?a.displayName.localeCompare(b.displayName,void 0,{numeric:!0,sensitivity:\&quot;base\&quot;}):!a.isFolder&amp;&amp;b.isFolder?1:-1&quot;,&quot;filterFn&quot;:&quot;node=>node.slugSegment!==\&quot;tags\&quot;&quot;,&quot;mapFn&quot;:&quot;node=>(node.name===\&quot;content\&quot;&amp;&amp;node.children&amp;&amp;(node.displayName=\&quot;\&quot;,node.collapsed=!1),node)&quot;}"><button type="button" class="explorer-toggle mobile-explorer hide-until-loaded" data-mobile="true" aria-controls="explorer-10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-menu"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button><button type="button" class="title-button explorer-toggle desktop-explorer" data-mobile="false" aria-expanded="true"><h2>Explorer</h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><div id="explorer-10" class="explorer-content" aria-expanded="false" role="group"><ul class="explorer-ul overflow" id="list-0"><li class="overflow-end"></li></ul></div><template id="template-file"><li><a href="#"></a></li></template><template id="template-folder"><li><div class="folder-container"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="folder-icon"><polyline points="6 9 12 15 18 9"></polyline></svg><div><button class="folder-button"><span class="folder-title"></span></button></div></div><div class="folder-outer"><ul class="content"></ul></div></li></template></div></div><div class="center"><div class="page-header"><div class="popover-hint"><nav class="breadcrumb-container" aria-label="breadcrumbs"><div class="breadcrumb-element"><a href="../../../../">Home</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/">JEngine Blog</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/Projects/">Projects</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/Projects/JEngine---DX12/">JEngine   DX12</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/Projects/JEngine---DX12/DirectX12/">DirectX12</a><p> ❯ </p></div><div class="breadcrumb-element"><a href>엔진 개발 04   CPU와 GPU의 상호작용   DirectX12</a></div></nav><h1 class="article-title">엔진 개발 04 - CPU와 GPU의 상호작용 - DirectX12</h1><p show-comma="true" class="content-meta"><time datetime="2025-11-09T13:21:40.522Z">Nov 09, 2025</time><span>18 min read</span></p><ul class="tags"><li><a href="../../../../tags/CPP" class="internal tag-link">CPP</a></li><li><a href="../../../../tags/DirectX12" class="internal tag-link">DirectX12</a></li></ul></div></div><article class="popover-hint"><ul>
+<li>CPU와 GPU를 모두 사용해 최적의 성능을 얻으려면 병렬로 사용하지만 중간중간 동기화도 필요함
+<ul>
+<li>이때 동기화는 병렬성을 망치기에 최소화해야 함</li>
+</ul>
+</li>
+</ul>
+<h2 id="command-queue와-command-list">Command Queue와 Command List<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#command-queue와-command-list" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>GPU에는 Command Queue가 있고 CPU는 렌더링 Command들을 Command List를 만들어 API를 통해 Queue에 제출함
+<ul>
+<li>중요한 점은 이 명령들을 GPU가 즉시 실행하는건 아니고 처리할 준비가 되어야지 실행되기 시작함</li>
+<li>즉, GPU가 이전에 제출된 명령들을 처리하느라 바쁘면 명령들은 Queue에 그냥 남아있음
+<ul>
+<li>CPU가 명령을 Queue에 제출하면 GPU가 Queue에서 명령을 뽑아서 처리</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Command Queue가 비면 GPU가 놀게되고, 꽉 차있으면 GPU가 명령을 처리해 자리가 생길때까지 CPU가 놀게 됨
+<ul>
+<li>두 상황 모두 좋지 않고 최대한 CPU와 GPU가 쉬지 않도록 해줘야 함</li>
+</ul>
+</li>
+</ul>
+<h3 id="command-queue-생성">Command Queue 생성<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#command-queue-생성" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<ul>
+<li><code>{C++}ID3D12CommandQueue</code> : Direct3D 12의 Command Queue를 대표하는 Interface
+<ul>
+<li><code>{C++}D3D12_COMMAND_QUEUE_DESC</code> 구조체를 생성해 설정한 다음 <code>{C++}CreateCommandQueue()</code>를 호출해 <code>{C++}ID3D12CommandQueue</code>를 생성함</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>Microsoft::WRL::ComPtr&lt;ID3D12CommandQueue> mCommandQueue;</span></span>
+<span data-line><span>D3D12_COMMAND_QUEUE_DESC queueDesc = {};</span></span>
+<span data-line><span>queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;</span></span>
+<span data-line><span>queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;</span></span>
+<span data-line><span>ThrowIfFailed(md3dDevice->CreateCommandQueue(&amp;queueDesc, IID_PPV_ARGS(&amp;mCommandQueue)));</span></span></code></pre></figure>
+<ul>
+<li><code>#define IID_PPV_ARGS(ppType) __uuidof(**(ppType)), IID_PPV_ARGS_Helper(ppType)</code>이 여기서 사용된 <code>{C++}IID_PPV_ARGS()</code>
+<ul>
+<li><code>__uuidof(**(ppType))</code>은 <code>(**(ppType))</code>의 COM Interface ID로 평가되는데, 위의 예시에서 ID는 <code>{C++}ID3D12CommandQueue</code>임</li>
+<li>보조 함수 <code>IID_PPV_ARGS</code>는 <code>ppType</code>을 <code>void**</code>로 Casting함</li>
+<li>DirectX 12 API에는 생성하고자 하는 Interface의 COM ID와 <code>void**</code>를 받는 함수들이 많기 때문에, 이 MACRO들은 자주 사용됨</li>
+<li>즉, COM ID와 <code>void**</code>를 인자로 사용할 수 있게 해줌</li>
+</ul>
+</li>
+<li>CommandList에는 <code>{C++}ID3D12CommandAllocator</code> 형식의 메모리 할당자가 하나 연관되는데 Command들은 이 메모리에 저장됨</li>
+<li><code>{C++}ExecuteCommandLists()</code>로 CommandList를 제출하면, CommandQueue는 메모리 할당자에 담긴 Command들을 참조함</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>HRESULT ID3D12Device::CreateCommandAllocator(</span></span>
+<span data-line><span>	D3D12_COMMAND_LIST_TYPE type,</span></span>
+<span data-line><span>	REFIID riid,</span></span>
+<span data-line><span>	void **ppCommandAllocator</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li>Command 메모리는 위의 함수를 사용해 할당해줌</li>
+<li><code>type</code> : 메모리 할당자와 연관시킬 수 있는 CommandList의 종류, 흔히 2 종류를 사용
+<ul>
+<li><code>{C++}D3D12_COMMAND_LIST_TYPE_DIRECT</code> : GPU가 직접 실행하는 CommandList</li>
+<li><code>{C++}D3D12_COMMAND_LIST_TYPE_BUNDLE</code> : Bundle을 나타내는 CommandList로 CommandList를 만드는데에는 CPU의 부담이 어느정도 있기 때문에, Direct3D 12는 일련의 Command들을 소위 Bundle(묶음) 단위로 기록할 수 있는 최적화 수단을 제공
+<ul>
+<li>Bundle을 추가하면 Driver는 렌더링 도중에 실행이 최적화되도록 Bundle의 Command들을 전처리함</li>
+<li>Profile을 통해 특정 Command List를 구축하는데 시간이 오래 걸리는걸 발견했다면, 이런 Bundle을 사용해 최적화를 고려해야 함
+<ul>
+<li>무조건 사용하지는 말고 성능상의 이득이 명확한 경우에만 사용</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>riid</code> : 생성하고자 하는 <code>ID3D12CommandAllocator</code> Interface의 COM ID</li>
+<li><code>ppCommandAllocator</code> : 생성된 명령 할당자를 가리키는 포인터 (출력 매개변수)</li>
+<li><code>riid</code>와 <code>ppCommandAllocator</code>는 위에서 설명한 <code>IID_PPV_ARGS()</code>로 한 번에 설정할 수 있음
+<ul>
+<li><code>{C++}ThrowIfFailed(md3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(mDirectCmdListAlloc.GetAddressOf())));</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="commandlist-생성">CommandList 생성<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#commandlist-생성" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>HRESULT ID3D12Device::CreateCommandList(</span></span>
+<span data-line><span>	UINT nodeMask,</span></span>
+<span data-line><span>	D3D12_COMMAND_LIST_TYPE type,</span></span>
+<span data-line><span>	ID3D12CommandAllocator *pCommandAllocator,</span></span>
+<span data-line><span>	ID3D12PipelineState *pInitialState,</span></span>
+<span data-line><span>	REFIID riid,</span></span>
+<span data-line><span>	void **ppCommandList</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li><code>nodeMask</code> : GPU가 하나인 시스템에서는 0으로 설정
+<ul>
+<li>GPU가 여러개라면 이 CommandList에 연관시킬 물리적 GPU 어댑터 노드들을 지정하는 bitmask 값을 설정</li>
+<li>GPU 어댑터 노드 개수는 <code>{C++}GetNodeCount()</code>로 알아낼 수 있음</li>
+</ul>
+</li>
+<li><code>type</code> : CommandList 종류
+<ul>
+<li><code>{C++}D3D12_COMMAND_LIST_TYPE_DIRECT</code>  or <code>{C++}D3D12_COMMAND_LIST_TYPE_BUNDLE</code></li>
+</ul>
+</li>
+<li><code>pCommandAllocator</code> : 생성된 CommandList에 연결시킬 메모리 할당자
+<ul>
+<li>CommandList와 메모리 할당자의 type이 일치해야 함</li>
+</ul>
+</li>
+<li><code>pInitialState</code> : CommandLIst의 초기 파이프라인 상태를 지정
+<ul>
+<li>Bundle의 경우 초기화 목적으로 쓰이며 실제 렌더링 명령은 없는 CommandList의 경우에는 Null을 지정해도 됨</li>
+</ul>
+</li>
+<li><code>riid</code> : 생성하고자 하는 CommandList에 해당하는 <code>{C++}ID3D12CommandList</code> Interface의 COM ID</li>
+<li><code>ppCommandList</code> : 생성된 CommandLIst를 가리키는 포인터 (출력)</li>
+<li>한 Memory Allocator를 여러 CommandList에 연관시켜도 되지만, Command들을 여러 CommandList에 동시에 기록할 수는 없음
+<ul>
+<li>즉, <strong>현재 Command들을 추가하는 CommandList을 제외한 모든 CommandList은 Close되어 있어야 함</strong></li>
+<li>이렇게 해야 한 CommandList에 모든 Command들이 바로 옆에 인접해서 저장됨</li>
+</ul>
+</li>
+<li>CommandList을 생성하거나 재설정하면 CommandList은 Open 상태가 되기에 주의해야 함
+<ul>
+<li>따라서, 같은 메모리 할당자로 두 CommandList를 연달아 생성하면 오류가 발생함</li>
+</ul>
+</li>
+</ul>
+<h3 id="commandlist의-command를-queue에-추가하는-방법">CommandList의 Command를 Queue에 추가하는 방법<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#commandlist의-command를-queue에-추가하는-방법" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<ul>
+<li><code>ID3D12CommandQueue</code>를 사용해 Command List에 있는 명령들을 대기열에 추가하는 함수</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>void ID3D12CommandQueue::ExecuteCommandLists(</span></span>
+<span data-line><span>	// 배열에 있는 명령 목록들의 개수</span></span>
+<span data-line><span>	UINT Count,</span></span>
+<span data-line><span>	// 명령 목록들의 배열의 첫 원소를 가리키는 포인터</span></span>
+<span data-line><span>	ID3D12CommandList *const *ppCommandLists</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li>CommandList들은 배열의 첫 원소부터 차례로 실행됨</li>
+<li><code>{C++}ID3D12CommandLists</code>가 CommandList의 Interface인데 실제 그래픽 작업을 위한 CommandList는 이 Interface를 상속하는 <code>{C++}ID3D12GraphicsCommandList</code>라는 Interface를 사용함
+<ul>
+<li><code>{C++}ID3D12GraphicsCommandList</code> Interface에는 명령들을 CommandList에 추가하는 여러 함수들이 있음</li>
+<li>ex) 아래 코드는 viewport를 설정하고 RenderTargetView를 지우고, 그리기 호출을 실행하는 명령들을 추가하는 과정</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>// mCommandList는 ID3D12CommandList 포인터</span></span>
+<span data-line><span>mCommandList->RSSetViewports(1, &amp;mScreenViewport);</span></span>
+<span data-line><span>mCommandList->ClearRenderTargetView(mBackBufferView, Colors::LightSteelBlue, 0, nullptr);</span></span>
+<span data-line><span>mCommandList->DrawIndexedInstanced(36, 1, 0, 0, 0);</span></span></code></pre></figure>
+<ul>
+<li>이 코드는 그냥 Command를 CommandList에 기록하기만 하고 나중에 <code>{C++}ExecuteCommandLists()</code>를 호출해야 명령들이 CommandQueue에 추가되고 GPU가 나중에 여기서 Command를 뽑아서 실행함</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>// CommandLIst를 닫아 기록을 끝냄</span></span>
+<span data-line><span>mCommandList->Close();</span></span></code></pre></figure>
+<ul>
+<li>이 함수를 호출해 명령들의 기록이 끝났음을 반드시 알려줘야 함</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>HERESULT ID3D12CommandList::Reset(</span></span>
+<span data-line><span>	ID3D12CommandAllocator *pAllocator,</span></span>
+<span data-line><span>	ID3D12PipelineState *pInitialstate</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li>이 <code>{C++}Reset()</code>을 사용해서 CommadList에 연결된 메모리에 새로운 명령들을 기록하는데 재사용할 수 잇게 됨
+<ul>
+<li>CommandList를 처음 생성했을때와 같은 상태로 만들어줌</li>
+<li>즉, CommandList를 해제하고 새로 할당하는 번거로움 없이 메모리를 재사용할 수 있는 것</li>
+</ul>
+</li>
+<li>CommandList를 재설정해도 CommandQueue에 있는 Command들에는 영향을 미치지 않음
+<ul>
+<li>CommandQueue가 참조하는 Command들은 연관된 CommandAllocator의 메모리에 여전히 남아있기 때문</li>
+</ul>
+</li>
+<li>하나의 Frame의 렌더링 명령들을 GPU에 제출한 후에는, CommandAllocator의 메모리를 다음 Frame을 위해 재사용해야 할 것이므로 <code>{C++}Reset()</code>을 사용
+<ul>
+<li><code>{C++}std::vector::clear</code>와 비슷한 개념으로 Vector의 크기가 0이 되지만 현재 Capacity는 변하지 않음</li>
+<li>그러나 CommandQueue가 메모리 할당자 안의 자료를 참조하고 있을 수 있으므로 <strong>GPU가 CommandList에 담긴 모든 명령을 실행했음이 확실해지기 전까지는 재설정하지 말아야 함</strong></li>
+</ul>
+</li>
+</ul>
+<h2 id="cpu-gpu-동기화">CPU-GPU 동기화<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#cpu-gpu-동기화" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>두 개의 처리 장치가 병렬로 실행되면 여러가지 동기화 문제가 발생함
+<ul>
+<li>CPU에서 어떤 물체를 그리기 위해 위치 정보를 참조하는 그리기 명령을 CommandQueue에 추가함</li>
+<li>그런데 CommandQueue에 추가하는 연산은 CPU의 실행을 차단하지 않으므로 계속해서 다음 단계로 넘어가는데 만약 GPU가 해당 물체를 그리기 전에 CPU가 새로운 위치를 갱신해 기존의 위치가 덮어씌워지면 원래 의도했던 위치에 물체가 그려지지 않게 됨</li>
+</ul>
+</li>
+<li>이런 문제의 해결책 하나는 GPU가 CommandQueue의 Command들 중 특정 지점까지의 모든 명령을 다 처리할때까지 CPU를 기다리게 하는 것
+<ul>
+<li>이걸 CommandList을 비운다 또는 방출한다(flush)라고 함</li>
+<li>이때 필요한 것이 Fence라고 부르는 객체</li>
+</ul>
+</li>
+</ul>
+<h3 id="fence">Fence<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#fence" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<ul>
+<li><code>{C++}ID3D12Fence</code> Interface인 Fence는 GPU와 CPU의 동기화를 위한 수단으로 사용됨</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>HRESULT ID3D12Device::CreateFence(</span></span>
+<span data-line><span>	UINT64 InitialValue,</span></span>
+<span data-line><span>	D3D12_FENCE_FLAGS Flags,</span></span>
+<span data-line><span>	REFIID riid,</span></span>
+<span data-line><span>	void **ppFence</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li>예시</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>ThrowIfFailed(md3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&amp;mFence)));</span></span></code></pre></figure>
+<ul>
+<li>Fence 객체는 UINT64 값 하나를 관리함
+<ul>
+<li>이 값은 시간상의 특정 Fence 지점을 식별하는 정수</li>
+<li>DirectX12 교재에서는 처음 Fence가 하나도 없을땐 이 값을 0으로 두고, 새 Fence를 만들때마다 이 값을 1씩 증가시킴</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>void D3DApp::FlushCommandQueue()</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>	// 현재 Fence 지저까지의 Command들을 표시하도록 Fence  값을 증가</span></span>
+<span data-line><span>    mCurrentFence++;</span></span>
+<span data-line> </span>
+<span data-line><span>    // 새 Fence 지점을 설정하는 명령(Signal)을 CommandQueue에 추가</span></span>
+<span data-line><span>    // 지금은 GPU timeline 상에 있으므로, 새 Fence 지점은 GPU가 이 Signal()</span></span>
+<span data-line><span>    // 명령까지의 모든 명령을 처리하기 전까지는 설정되지 않음</span></span>
+<span data-line><span>    ThrowIfFailed(mCommandQueue->Signal(mFence.Get(), mCurrentFence));</span></span>
+<span data-line> </span>
+<span data-line><span>	// GPU가 이 Fence 지점까지의 명령들을 완료할 때까지 기다림</span></span>
+<span data-line><span>    if(mFence->GetCompletedValue() &lt; mCurrentFence)</span></span>
+<span data-line><span>	{</span></span>
+<span data-line><span>		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);</span></span>
+<span data-line> </span>
+<span data-line><span>        // GPU가 현재 Fence 지점에 도달헀으면 Event를 발동 </span></span>
+<span data-line><span>        ThrowIfFailed(mFence->SetEventOnCompletion(mCurrentFence, eventHandle));</span></span>
+<span data-line> </span>
+<span data-line><span>        // GPU가 현재 Fence 지점에 도달했음을 뜻하는 Event를 기다림</span></span>
+<span data-line><span>		WaitForSingleObject(eventHandle, INFINITE);</span></span>
+<span data-line><span>        CloseHandle(eventHandle);</span></span>
+<span data-line><span>	}</span></span>
+<span data-line><span>}</span></span></code></pre></figure>
+<ul>
+<li>이 함수는 Fence를 이용해서 CommandQueue를 비우는 방법</li>
+<li>이 함수를 매 Frame이 끝나거나 시작할때 사용해 CommandQueue를 비워주면 되지만 이상적인 해결책은 아님
+<ul>
+<li>GPU의 작업이 끝날때까지 CPU가 기다려야 하기 때문</li>
+<li>더 좋은 방법은 추후 설명</li>
+</ul>
+</li>
+<li>CommandQueue를 비우는 시점에는 제약이 거의 없음
+<ul>
+<li>특히, 한 Frame에서 딱 한 번만 비워야 하는 것은 아님 (여러번 비울 수 있음)</li>
+<li>ex) 초기화를 위한 GPU 명령들이 있다면, 먼저 초기화 명령들을 비운 후에 주 렌더링 Loop로 진입하면 2번 Flush하는 것</li>
+</ul>
+</li>
+<li>위에서 말한 오류를 해결하려면 모든 GPU 명령이 실행되었음이 확실해진 이후에 CommandAllocator를 재설정하려면, CommandQueue를 비운 후에 CommandAllocator를 재설정하면 됨</li>
+</ul>
+<h2 id="resource-transition">Resource Transition<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#resource-transition" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>렌더링 파이프라인에서는 GPU가 한 State에서 한 Resource에 Write하고 다른 State에서 같은 Resource를 Read하는 식으로 사용하는 경우가 많음</li>
+<li>그런데 GPU의 Write가 끝나지 않았거나 Write하지도 않았는데 Read하려고 하면 문제가 생김
+<ul>
+<li>이를 Resource Hazard라고 부르기도 하는데 병렬처리의 가장 대표적인 위험 상황</li>
+</ul>
+</li>
+<li>이 문제를 해결하기 위해 Direct3D는 Resource들에 State를 부여함
+<ul>
+<li>새로 생성된 Resource는 Default State로 시작</li>
+</ul>
+</li>
+<li>임의의 State Transition을 Direct3D에게 보고하는 것은 전적으로 CPU의 몫
+<ul>
+<li>그래서 GPU는 State를 Transition하고 Resrouce Hazard를 방지하는데 필요한 일들을 자유롭게 진행할 수 있음</li>
+<li>ex) Texture 자원에 Write할때는 RenderTarget으로 설정하고 이후 Texture를 Read할때는 ShaderResource로 Transition함</li>
+</ul>
+</li>
+<li>Resource Transition을 CPU가 Direct3D에 보고함으로써, GPU는 Resource Hazard를 피하는데 필요한 조치를 진행할 수 있음
+<ul>
+<li>ex) Write가 완도되길 기다린 후 Read를 시도하기</li>
+</ul>
+</li>
+<li>Transition을 프로그램에게 맡긴건 성능 때문으로 프로그래머는 이런 전이가 언제 필요한지 알고 있는데 이걸 자동으로 추적하면 성능에 부담이 생기기 떄문</li>
+</ul>
+<h3 id="resource-transition-방법">Resource Transition 방법<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#resource-transition-방법" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<ul>
+<li>Transition Resource Barrier들의 배열을 설정해서 Resource Transition을 지정할 수 있음</li>
+<li>배열을 사용하는 덕분에, 한 번의 API 호출로 여러 개의 Resource를 Transition할 수 있음
+<ul>
+<li><code>{C++}D3D12_RESOURCE_BARRIER_DESC</code> 구조체로 설정</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>   ...</span></span>
+<span data-line><span>    static inline CD3DX12_RESOURCE_BARRIER Transition(</span></span>
+<span data-line><span>        _In_ ID3D12Resource* pResource,</span></span>
+<span data-line><span>        D3D12_RESOURCE_STATES stateBefore,</span></span>
+<span data-line><span>        D3D12_RESOURCE_STATES stateAfter,</span></span>
+<span data-line><span>        UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,</span></span>
+<span data-line><span>        D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)</span></span>
+<span data-line><span>    {</span></span>
+<span data-line><span>        CD3DX12_RESOURCE_BARRIER result;</span></span>
+<span data-line><span>        ZeroMemory(&amp;result, sizeof(result));</span></span>
+<span data-line><span>        D3D12_RESOURCE_BARRIER &amp;barrier = result;</span></span>
+<span data-line><span>        result.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;</span></span>
+<span data-line><span>        result.Flags = flags;</span></span>
+<span data-line><span>        barrier.Transition.pResource = pResource;</span></span>
+<span data-line><span>        barrier.Transition.StateBefore = stateBefore;</span></span>
+<span data-line><span>        barrier.Transition.StateAfter = stateAfter;</span></span>
+<span data-line><span>        barrier.Transition.Subresource = subresource;</span></span>
+<span data-line><span>        return result;</span></span>
+<span data-line><span>    }</span></span>
+<span data-line><span>    ...</span></span></code></pre></figure>
+<ul>
+<li><code>d3dx12.h</code>에 정의되어 있는 보조 함수들을 사용해 주어진 자원과 이전, 이후 State에 해당하는 Transition Resource Barrier 구조체를 생성
+<ul>
+<li><code>{C++}CD3DX12_RESOURCE_BARRIER</code>가 <code>{C++}D3D12_RESOURCE_BARRIER_DESC</code>를 상속하고 거기에 여러 편의용 함수들을 추가한 일종의 확장 버전임</li>
+</ul>
+</li>
+<li>Direct3D 12의 구조체들은 대부분에는 이런 편의용 확장 버전들이 존재하는데 <code>{C++}CD3DX12_</code>로 시작하는 확장 버전들은 모두 <code>d3dx12.h</code>에 정의되어 있음
+<ul>
+<li>이 헤더 파일은 공식 DirectX12 SDK의 일부가 아니라서 Microsoft 사이트에서 따로 다운받아 사용해야 함</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>	mCommandList->ResourceBarrier(1, &amp;CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),</span></span>
+<span data-line><span>		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));</span></span></code></pre></figure>
+<ul>
+<li>확장 버전 사용 예시로 화면에 표시할 이미지를 나타내는 Texture 자원을 Presentation State에서 RenderTarget으로 Transition하고 있음</li>
+<li>이때 Transition Reosurce Barrier가 CommandList에 추가되고 있음
+<ul>
+<li>Transition Resource Barrier라는 것을 GPU에게 Resource의 State가 Transition됨을 알려주는 하나의 명령이라고 생각하면 됨</li>
+</ul>
+</li>
+<li>Command을 통해서 Resource의 Transition State를 알려주기에 GPU는 이후의 명령들을 실행할때 위험 상황을 피하는데 필요한 단계들을 수행함</li>
+</ul>
+<h2 id="commandlist를-이용한-multi-thread-활용">CommandList를 이용한 Multi-Thread 활용<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#commandlist를-이용한-multi-thread-활용" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>DirectX12는 Multi-Thread를 효율적으로 활용할 수 있도록 설계되어 있음</li>
+<li>CommandList의 설계는 Direct3D가 Multi-Thread 적용의 장점을 취하는 한 방법
+<ul>
+<li>물체가 많은 큰 장면을 다룰때, 장면 전체를 하나의 CommandList로 그리려면 CommandList를 구축하느데 시간(CPU 시간)이 오래 걸림</li>
+</ul>
+</li>
+<li>해결책은 여러 개의 CommandList을 병렬로 구축하는 것
+<ul>
+<li>ex) Thread 4개를 띄워서 각자 하나의 CommandLIst를 구축하게 하면, 전체적인 시간이 25% 줄어듬</li>
+</ul>
+</li>
+<li>CommandList 생성에 Multi-Thread 적용시 주의할 점
+<ul>
+<li>
+<ol>
+<li>CommandList는 Free-Threaded 모형을 따르지 않는다</li>
+</ol>
+<ul>
+<li>보통의 경우 여러 Thread가 같은 CommandList를 공유하지 않으며, 그 Method들을 동시에 호출하지 않는다</li>
+<li>따라서, <strong>일반적으로 각 Thread는 각자 자신만의 CommandList를 가지게 됨</strong></li>
+</ul>
+</li>
+<li>
+<ol start="2">
+<li>CommandAllocator도 Free-Threaded가 아니다</li>
+</ol>
+<ul>
+<li>보통의 경우 여러 Thread가 같은 CommandAllocator를 공유하지 않으며, 그 method들을 동시에 호출하지 않음</li>
+<li><strong>일반적으로 각 Thread는 각자 자신만의 CommandAllocator를 가지게 됨</strong></li>
+</ul>
+</li>
+<li>
+<ol start="3">
+<li>CommandQueue는 Free-Threaed 모형을 따른다</li>
+</ol>
+<ul>
+<li>여러 Threads가 같은 CommandQueue에 접근해 그 Method들을 동시에 호출할 수 있다</li>
+<li>특히, <strong>Thread들이 각자 자신이 생성한 CommandList을 동시에 CommandQueue에 제출할 수 있다.</strong></li>
+</ul>
+</li>
+<li>
+<ol start="4">
+<li>성능상의 이유로, 프로그램은 <strong>동시에 기록할 수 있는 CommandList들의 최대 개수를 반드시 초기화 시점에서 설정해야 한다.</strong></li>
+</ol>
+</li>
+</ul>
+</li>
+<li>지금은 Multi-Thread를 적용하지 않겠지만 추후에 확장</li>
+</ul></article><hr/><div class="page-footer"><div class="giscus" data-repo="Jin-SukKim/Blog" data-repo-id="R_kgDOQHKGMA" data-category="General" data-category-id="DIC_kwDOQHKGMM4Cw975" data-mapping="url" data-strict="1" data-reactions-enabled="1" data-input-position="bottom" data-light-theme="light" data-dark-theme="dark" data-theme-url="https://jin-sukkim.github.io/Blog/static/giscus" data-lang="en"></div></div></div><div class="right sidebar"><div class="graph"><h3>Graph View</h3><div class="graph-outer"><div class="graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:1,&quot;scale&quot;:1.1,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.3,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:false,&quot;enableRadial&quot;:false}"></div><button class="global-graph-icon" aria-label="Global Graph"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 55 55" fill="currentColor" xml:space="preserve"><path d="M49,0c-3.309,0-6,2.691-6,6c0,1.035,0.263,2.009,0.726,2.86l-9.829,9.829C32.542,17.634,30.846,17,29,17
+                s-3.542,0.634-4.898,1.688l-7.669-7.669C16.785,10.424,17,9.74,17,9c0-2.206-1.794-4-4-4S9,6.794,9,9s1.794,4,4,4
+                c0.74,0,1.424-0.215,2.019-0.567l7.669,7.669C21.634,21.458,21,23.154,21,25s0.634,3.542,1.688,4.897L10.024,42.562
+                C8.958,41.595,7.549,41,6,41c-3.309,0-6,2.691-6,6s2.691,6,6,6s6-2.691,6-6c0-1.035-0.263-2.009-0.726-2.86l12.829-12.829
+                c1.106,0.86,2.44,1.436,3.898,1.619v10.16c-2.833,0.478-5,2.942-5,5.91c0,3.309,2.691,6,6,6s6-2.691,6-6c0-2.967-2.167-5.431-5-5.91
+                v-10.16c1.458-0.183,2.792-0.759,3.898-1.619l7.669,7.669C41.215,39.576,41,40.26,41,41c0,2.206,1.794,4,4,4s4-1.794,4-4
+                s-1.794-4-4-4c-0.74,0-1.424,0.215-2.019,0.567l-7.669-7.669C36.366,28.542,37,26.846,37,25s-0.634-3.542-1.688-4.897l9.665-9.665
+                C46.042,11.405,47.451,12,49,12c3.309,0,6-2.691,6-6S52.309,0,49,0z M11,9c0-1.103,0.897-2,2-2s2,0.897,2,2s-0.897,2-2,2
+                S11,10.103,11,9z M6,51c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S8.206,51,6,51z M33,49c0,2.206-1.794,4-4,4s-4-1.794-4-4
+                s1.794-4,4-4S33,46.794,33,49z M29,31c-3.309,0-6-2.691-6-6s2.691-6,6-6s6,2.691,6,6S32.309,31,29,31z M47,41c0,1.103-0.897,2-2,2
+                s-2-0.897-2-2s0.897-2,2-2S47,39.897,47,41z M49,10c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S51.206,10,49,10z"></path></svg></button></div><div class="global-graph-outer"><div class="global-graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:-1,&quot;scale&quot;:0.9,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.2,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:true,&quot;enableRadial&quot;:true}"></div></div></div><div class="toc desktop-only"><button type="button" class="toc-header" aria-controls="toc-3" aria-expanded="true"><h3>Table of Contents</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><ul id="list-1" class="toc-content overflow"><li class="depth-0"><a href="#command-queue와-command-list" data-for="command-queue와-command-list">Command Queue와 Command List</a></li><li class="depth-1"><a href="#command-queue-생성" data-for="command-queue-생성">Command Queue 생성</a></li><li class="depth-1"><a href="#commandlist-생성" data-for="commandlist-생성">CommandList 생성</a></li><li class="depth-1"><a href="#commandlist의-command를-queue에-추가하는-방법" data-for="commandlist의-command를-queue에-추가하는-방법">CommandList의 Command를 Queue에 추가하는 방법</a></li><li class="depth-0"><a href="#cpu-gpu-동기화" data-for="cpu-gpu-동기화">CPU-GPU 동기화</a></li><li class="depth-1"><a href="#fence" data-for="fence">Fence</a></li><li class="depth-0"><a href="#resource-transition" data-for="resource-transition">Resource Transition</a></li><li class="depth-1"><a href="#resource-transition-방법" data-for="resource-transition-방법">Resource Transition 방법</a></li><li class="depth-0"><a href="#commandlist를-이용한-multi-thread-활용" data-for="commandlist를-이용한-multi-thread-활용">CommandList를 이용한 Multi-Thread 활용</a></li><li class="overflow-end"></li></ul></div><div class="backlinks"><h3>Backlinks</h3><ul id="list-2" class="overflow"><li><a href="../../../../content/Projects/JEngine---DX12/JEngine-Project" class="internal">JEngine Project</a></li><li class="overflow-end"></li></ul></div><div class="recent-notes desktop-only"><h3>최근 포스트</h3><ul class="recent-ul"><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../" class="internal">JEngine Blog</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:41.702Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/" class="internal">JEngine Blog</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:41.701Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/Study/AI/논문/SALMONN" class="internal">SALMONN</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:40.731Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/Study/AI/논문/APT---Adaptive-Pruning-and-Tuning-Pretrained-Language-Models-forEfficient-Training-and-Inference" class="internal">APT - Adaptive Pruning and Tuning Pretrained Language Models forEfficient Training and Inference</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:40.724Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/Projects/Project-설정법/VS2022-프로젝트-설정" class="internal">VS2022 프로젝트 설정</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:40.553Z">Nov 09, 2025</time></p></div></li></ul></div></div><footer class><ul><li><a href="https://github.com/Jin-SukKim">GitHub</a></li></ul><p>© 2025 Jin-SukKim</p></footer></div></div></body><script type="application/javascript">function n(){let t=this.parentElement;t.classList.toggle("is-collapsed");let e=t.getElementsByClassName("callout-content")[0];if(!e)return;let l=t.classList.contains("is-collapsed");e.style.gridTemplateRows=l?"0fr":"1fr"}function c(){let t=document.getElementsByClassName("callout is-collapsible");for(let e of t){let l=e.getElementsByClassName("callout-title")[0],s=e.getElementsByClassName("callout-content")[0];if(!l||!s)continue;l.addEventListener("click",n),window.addCleanup(()=>l.removeEventListener("click",n));let o=e.classList.contains("is-collapsed");s.style.gridTemplateRows=o?"0fr":"1fr"}}document.addEventListener("nav",c);
+</script><script type="module">function f(i,e){if(!i)return;function r(o){o.target===this&&(o.preventDefault(),o.stopPropagation(),e())}function t(o){o.key.startsWith("Esc")&&(o.preventDefault(),e())}i?.addEventListener("click",r),window.addCleanup(()=>i?.removeEventListener("click",r)),document.addEventListener("keydown",t),window.addCleanup(()=>document.removeEventListener("keydown",t))}function y(i){for(;i.firstChild;)i.removeChild(i.firstChild)}var h=class{constructor(e,r){this.container=e;this.content=r;this.setupEventListeners(),this.setupNavigationControls(),this.resetTransform()}isDragging=!1;startPan={x:0,y:0};currentPan={x:0,y:0};scale=1;MIN_SCALE=.5;MAX_SCALE=3;cleanups=[];setupEventListeners(){let e=this.onMouseDown.bind(this),r=this.onMouseMove.bind(this),t=this.onMouseUp.bind(this),o=this.resetTransform.bind(this);this.container.addEventListener("mousedown",e),document.addEventListener("mousemove",r),document.addEventListener("mouseup",t),window.addEventListener("resize",o),this.cleanups.push(()=>this.container.removeEventListener("mousedown",e),()=>document.removeEventListener("mousemove",r),()=>document.removeEventListener("mouseup",t),()=>window.removeEventListener("resize",o))}cleanup(){for(let e of this.cleanups)e()}setupNavigationControls(){let e=document.createElement("div");e.className="mermaid-controls";let r=this.createButton("+",()=>this.zoom(.1)),t=this.createButton("-",()=>this.zoom(-.1)),o=this.createButton("Reset",()=>this.resetTransform());e.appendChild(t),e.appendChild(o),e.appendChild(r),this.container.appendChild(e)}createButton(e,r){let t=document.createElement("button");return t.textContent=e,t.className="mermaid-control-button",t.addEventListener("click",r),window.addCleanup(()=>t.removeEventListener("click",r)),t}onMouseDown(e){e.button===0&&(this.isDragging=!0,this.startPan={x:e.clientX-this.currentPan.x,y:e.clientY-this.currentPan.y},this.container.style.cursor="grabbing")}onMouseMove(e){this.isDragging&&(e.preventDefault(),this.currentPan={x:e.clientX-this.startPan.x,y:e.clientY-this.startPan.y},this.updateTransform())}onMouseUp(){this.isDragging=!1,this.container.style.cursor="grab"}zoom(e){let r=Math.min(Math.max(this.scale+e,this.MIN_SCALE),this.MAX_SCALE),t=this.content.getBoundingClientRect(),o=t.width/2,n=t.height/2,c=r-this.scale;this.currentPan.x-=o*c,this.currentPan.y-=n*c,this.scale=r,this.updateTransform()}updateTransform(){this.content.style.transform=`translate(${this.currentPan.x}px, ${this.currentPan.y}px) scale(${this.scale})`}resetTransform(){this.scale=1;let e=this.content.querySelector("svg");this.currentPan={x:e.getBoundingClientRect().width/2,y:e.getBoundingClientRect().height/2},this.updateTransform()}},C=["--secondary","--tertiary","--gray","--light","--lightgray","--highlight","--dark","--darkgray","--codeFont"],E;document.addEventListener("nav",async()=>{let e=document.querySelector(".center").querySelectorAll("code.mermaid");if(e.length===0)return;E||=await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.esm.min.mjs");let r=E.default,t=new WeakMap;for(let n of e)t.set(n,n.innerText);async function o(){for(let s of e){s.removeAttribute("data-processed");let a=t.get(s);a&&(s.innerHTML=a)}let n=C.reduce((s,a)=>(s[a]=window.getComputedStyle(document.documentElement).getPropertyValue(a),s),{}),c=document.documentElement.getAttribute("saved-theme")==="dark";r.initialize({startOnLoad:!1,securityLevel:"loose",theme:c?"dark":"base",themeVariables:{fontFamily:n["--codeFont"],primaryColor:n["--light"],primaryTextColor:n["--darkgray"],primaryBorderColor:n["--tertiary"],lineColor:n["--darkgray"],secondaryColor:n["--secondary"],tertiaryColor:n["--tertiary"],clusterBkg:n["--light"],edgeLabelBackground:n["--highlight"]}}),await r.run({nodes:e})}await o(),document.addEventListener("themechange",o),window.addCleanup(()=>document.removeEventListener("themechange",o));for(let n=0;n<e.length;n++){let v=function(){let g=l.querySelector("#mermaid-space"),m=l.querySelector(".mermaid-content");if(!m)return;y(m);let w=c.querySelector("svg").cloneNode(!0);m.appendChild(w),l.classList.add("active"),g.style.cursor="grab",u=new h(g,m)},M=function(){l.classList.remove("active"),u?.cleanup(),u=null},c=e[n],s=c.parentElement,a=s.querySelector(".clipboard-button"),d=s.querySelector(".expand-button"),p=window.getComputedStyle(a),L=a.offsetWidth+parseFloat(p.marginLeft||"0")+parseFloat(p.marginRight||"0");d.style.right=`calc(${L}px + 0.3rem)`,s.prepend(d);let l=s.querySelector("#mermaid-container");if(!l)return;let u=null;d.addEventListener("click",v),f(l,M),window.addCleanup(()=>{u?.cleanup(),d.removeEventListener("click",v)})}});
+</script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.js" type="application/javascript"></script><script src="../../../../postscript.js" type="module"></script></html>

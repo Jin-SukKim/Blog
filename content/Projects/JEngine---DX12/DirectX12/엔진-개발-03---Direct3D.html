@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr"><head><title>엔진 개발 03 - Direct3D</title><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted Grotesk:wght@400;700&amp;family=Source Sans Pro:ital,wght@0,400;0,600;1,400;1,600&amp;family=IBM Plex Mono:wght@400;600&amp;display=swap"/><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="og:site_name" content="JEngine"/><meta property="og:title" content="엔진 개발 03 - Direct3D"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="엔진 개발 03 - Direct3D"/><meta name="twitter:description" content="목표 Direct3D의 역할 이해 Direct3D에서 COM의 역할 이해 2차원 이미지의 저장방식, 페이지 전환, 깊이 버퍼링 Multi-Sampling 같은 그래픽 개념 성능 카운터 함수들을 이요해 고해상도 타이머 값을 얻기 Direct3D 초기화 Direct3D 12 개요 Direct3D는 GPU를 제어하는 저수준 Graphics API 3차원 그래픽 가속 기능을 이용해 3D World를 렌더링 가능 응용 프로그램과 그래픽 하드웨어 사이에 Direct3D라는 Interface를 통해 GPU에 명령을 주는데 Driver가 내부적으..."/><meta property="og:description" content="목표 Direct3D의 역할 이해 Direct3D에서 COM의 역할 이해 2차원 이미지의 저장방식, 페이지 전환, 깊이 버퍼링 Multi-Sampling 같은 그래픽 개념 성능 카운터 함수들을 이요해 고해상도 타이머 값을 얻기 Direct3D 초기화 Direct3D 12 개요 Direct3D는 GPU를 제어하는 저수준 Graphics API 3차원 그래픽 가속 기능을 이용해 3D World를 렌더링 가능 응용 프로그램과 그래픽 하드웨어 사이에 Direct3D라는 Interface를 통해 GPU에 명령을 주는데 Driver가 내부적으..."/><meta property="og:image:alt" content="목표 Direct3D의 역할 이해 Direct3D에서 COM의 역할 이해 2차원 이미지의 저장방식, 페이지 전환, 깊이 버퍼링 Multi-Sampling 같은 그래픽 개념 성능 카운터 함수들을 이요해 고해상도 타이머 값을 얻기 Direct3D 초기화 Direct3D 12 개요 Direct3D는 GPU를 제어하는 저수준 Graphics API 3차원 그래픽 가속 기능을 이용해 3D World를 렌더링 가능 응용 프로그램과 그래픽 하드웨어 사이에 Direct3D라는 Interface를 통해 GPU에 명령을 주는데 Driver가 내부적으..."/><meta property="twitter:domain" content="jin-sukkim.github.io/Blog"/><meta property="og:url" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-03---Direct3D"/><meta property="twitter:url" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-03---Direct3D"/><link rel="icon" href="../../../../static/icon.png"/><meta name="description" content="목표 Direct3D의 역할 이해 Direct3D에서 COM의 역할 이해 2차원 이미지의 저장방식, 페이지 전환, 깊이 버퍼링 Multi-Sampling 같은 그래픽 개념 성능 카운터 함수들을 이요해 고해상도 타이머 값을 얻기 Direct3D 초기화 Direct3D 12 개요 Direct3D는 GPU를 제어하는 저수준 Graphics API 3차원 그래픽 가속 기능을 이용해 3D World를 렌더링 가능 응용 프로그램과 그래픽 하드웨어 사이에 Direct3D라는 Interface를 통해 GPU에 명령을 주는데 Driver가 내부적으..."/><meta name="generator" content="Quartz"/><link href="../../../../index.css" rel="stylesheet" type="text/css" spa-preserve/><style>.expand-button {
+  position: absolute;
+  display: flex;
+  float: right;
+  padding: 0.4rem;
+  margin: 0.3rem;
+  right: 0;
+  color: var(--gray);
+  border-color: var(--dark);
+  background-color: var(--light);
+  border: 1px solid;
+  border-radius: 5px;
+  opacity: 0;
+  transition: 0.2s;
+}
+.expand-button > svg {
+  fill: var(--light);
+  filter: contrast(0.3);
+}
+.expand-button:hover {
+  cursor: pointer;
+  border-color: var(--secondary);
+}
+.expand-button:focus {
+  outline: 0;
+}
+
+pre:hover > .expand-button {
+  opacity: 1;
+  transition: 0.2s;
+}
+
+#mermaid-container {
+  position: fixed;
+  contain: layout;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: none;
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+}
+#mermaid-container.active {
+  display: inline-block;
+}
+#mermaid-container > #mermaid-space {
+  border: 1px solid var(--lightgray);
+  background-color: var(--light);
+  border-radius: 5px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 80vh;
+  width: 80vw;
+  overflow: hidden;
+}
+#mermaid-container > #mermaid-space > .mermaid-content {
+  padding: 2rem;
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform 0.1s ease;
+  overflow: visible;
+  min-height: 200px;
+  min-width: 200px;
+}
+#mermaid-container > #mermaid-space > .mermaid-content pre {
+  margin: 0;
+  border: none;
+}
+#mermaid-container > #mermaid-space > .mermaid-content svg {
+  max-width: none;
+  height: auto;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--lightgray);
+  background: var(--light);
+  color: var(--dark);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: var(--bodyFont);
+  transition: all 0.2s ease;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:hover {
+  background: var(--lightgray);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:active {
+  transform: translateY(1px);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:nth-child(2) {
+  width: auto;
+  padding: 0 12px;
+  font-size: 14px;
+}
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VSb290IjoiL2hvbWUvcnVubmVyL3dvcmsvT2JzaWRpYW5Ob3RlL09ic2lkaWFuTm90ZS9xdWFydHovcXVhcnR6L2NvbXBvbmVudHMvc3R5bGVzIiwic291cmNlcyI6WyJtZXJtYWlkLmlubGluZS5zY3NzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTtFQUNBOztBQUdGO0VBQ0U7RUFDQTs7QUFHRjtFQUNFOzs7QUFLRjtFQUNFO0VBQ0E7OztBQUlKO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFOztBQUdGO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFO0VBQ0E7O0FBR0Y7RUFDRTtFQUNBOztBQUlKO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTs7QUFHRjtFQUNFOztBQUlGO0VBQ0U7RUFDQTtFQUNBIiwic291cmNlc0NvbnRlbnQiOlsiLmV4cGFuZC1idXR0b24ge1xuICBwb3NpdGlvbjogYWJzb2x1dGU7XG4gIGRpc3BsYXk6IGZsZXg7XG4gIGZsb2F0OiByaWdodDtcbiAgcGFkZGluZzogMC40cmVtO1xuICBtYXJnaW46IDAuM3JlbTtcbiAgcmlnaHQ6IDA7IC8vIE5PVEU6IHJpZ2h0IHdpbGwgYmUgc2V0IGluIG1lcm1haWQuaW5saW5lLnRzXG4gIGNvbG9yOiB2YXIoLS1ncmF5KTtcbiAgYm9yZGVyLWNvbG9yOiB2YXIoLS1kYXJrKTtcbiAgYmFja2dyb3VuZC1jb2xvcjogdmFyKC0tbGlnaHQpO1xuICBib3JkZXI6IDFweCBzb2xpZDtcbiAgYm9yZGVyLXJhZGl1czogNXB4O1xuICBvcGFjaXR5OiAwO1xuICB0cmFuc2l0aW9uOiAwLjJzO1xuXG4gICYgPiBzdmcge1xuICAgIGZpbGw6IHZhcigtLWxpZ2h0KTtcbiAgICBmaWx0ZXI6IGNvbnRyYXN0KDAuMyk7XG4gIH1cblxuICAmOmhvdmVyIHtcbiAgICBjdXJzb3I6IHBvaW50ZXI7XG4gICAgYm9yZGVyLWNvbG9yOiB2YXIoLS1zZWNvbmRhcnkpO1xuICB9XG5cbiAgJjpmb2N1cyB7XG4gICAgb3V0bGluZTogMDtcbiAgfVxufVxuXG5wcmUge1xuICAmOmhvdmVyID4gLmV4cGFuZC1idXR0b24ge1xuICAgIG9wYWNpdHk6IDE7XG4gICAgdHJhbnNpdGlvbjogMC4ycztcbiAgfVxufVxuXG4jbWVybWFpZC1jb250YWluZXIge1xuICBwb3NpdGlvbjogZml4ZWQ7XG4gIGNvbnRhaW46IGxheW91dDtcbiAgei1pbmRleDogOTk5O1xuICBsZWZ0OiAwO1xuICB0b3A6IDA7XG4gIHdpZHRoOiAxMDB2dztcbiAgaGVpZ2h0OiAxMDB2aDtcbiAgb3ZlcmZsb3c6IGhpZGRlbjtcbiAgZGlzcGxheTogbm9uZTtcbiAgYmFja2Ryb3AtZmlsdGVyOiBibHVyKDRweCk7XG4gIGJhY2tncm91bmQ6IHJnYmEoMCwgMCwgMCwgMC41KTtcblxuICAmLmFjdGl2ZSB7XG4gICAgZGlzcGxheTogaW5saW5lLWJsb2NrO1xuICB9XG5cbiAgJiA+ICNtZXJtYWlkLXNwYWNlIHtcbiAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1saWdodGdyYXkpO1xuICAgIGJhY2tncm91bmQtY29sb3I6IHZhcigtLWxpZ2h0KTtcbiAgICBib3JkZXItcmFkaXVzOiA1cHg7XG4gICAgcG9zaXRpb246IGZpeGVkO1xuICAgIHRvcDogNTAlO1xuICAgIGxlZnQ6IDUwJTtcbiAgICB0cmFuc2Zvcm06IHRyYW5zbGF0ZSgtNTAlLCAtNTAlKTtcbiAgICBoZWlnaHQ6IDgwdmg7XG4gICAgd2lkdGg6IDgwdnc7XG4gICAgb3ZlcmZsb3c6IGhpZGRlbjtcblxuICAgICYgPiAubWVybWFpZC1jb250ZW50IHtcbiAgICAgIHBhZGRpbmc6IDJyZW07XG4gICAgICBwb3NpdGlvbjogcmVsYXRpdmU7XG4gICAgICB0cmFuc2Zvcm0tb3JpZ2luOiAwIDA7XG4gICAgICB0cmFuc2l0aW9uOiB0cmFuc2Zvcm0gMC4xcyBlYXNlO1xuICAgICAgb3ZlcmZsb3c6IHZpc2libGU7XG4gICAgICBtaW4taGVpZ2h0OiAyMDBweDtcbiAgICAgIG1pbi13aWR0aDogMjAwcHg7XG5cbiAgICAgIHByZSB7XG4gICAgICAgIG1hcmdpbjogMDtcbiAgICAgICAgYm9yZGVyOiBub25lO1xuICAgICAgfVxuXG4gICAgICBzdmcge1xuICAgICAgICBtYXgtd2lkdGg6IG5vbmU7XG4gICAgICAgIGhlaWdodDogYXV0bztcbiAgICAgIH1cbiAgICB9XG5cbiAgICAmID4gLm1lcm1haWQtY29udHJvbHMge1xuICAgICAgcG9zaXRpb246IGFic29sdXRlO1xuICAgICAgYm90dG9tOiAyMHB4O1xuICAgICAgcmlnaHQ6IDIwcHg7XG4gICAgICBkaXNwbGF5OiBmbGV4O1xuICAgICAgZ2FwOiA4cHg7XG4gICAgICBwYWRkaW5nOiA4cHg7XG4gICAgICBiYWNrZ3JvdW5kOiB2YXIoLS1saWdodCk7XG4gICAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1saWdodGdyYXkpO1xuICAgICAgYm9yZGVyLXJhZGl1czogNnB4O1xuICAgICAgYm94LXNoYWRvdzogMCAycHggNHB4IHJnYmEoMCwgMCwgMCwgMC4xKTtcbiAgICAgIHotaW5kZXg6IDI7XG5cbiAgICAgIC5tZXJtYWlkLWNvbnRyb2wtYnV0dG9uIHtcbiAgICAgICAgZGlzcGxheTogZmxleDtcbiAgICAgICAgYWxpZ24taXRlbXM6IGNlbnRlcjtcbiAgICAgICAganVzdGlmeS1jb250ZW50OiBjZW50ZXI7XG4gICAgICAgIHdpZHRoOiAzMnB4O1xuICAgICAgICBoZWlnaHQ6IDMycHg7XG4gICAgICAgIHBhZGRpbmc6IDA7XG4gICAgICAgIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpZ2h0Z3JheSk7XG4gICAgICAgIGJhY2tncm91bmQ6IHZhcigtLWxpZ2h0KTtcbiAgICAgICAgY29sb3I6IHZhcigtLWRhcmspO1xuICAgICAgICBib3JkZXItcmFkaXVzOiA0cHg7XG4gICAgICAgIGN1cnNvcjogcG9pbnRlcjtcbiAgICAgICAgZm9udC1zaXplOiAxNnB4O1xuICAgICAgICBmb250LWZhbWlseTogdmFyKC0tYm9keUZvbnQpO1xuICAgICAgICB0cmFuc2l0aW9uOiBhbGwgMC4ycyBlYXNlO1xuXG4gICAgICAgICY6aG92ZXIge1xuICAgICAgICAgIGJhY2tncm91bmQ6IHZhcigtLWxpZ2h0Z3JheSk7XG4gICAgICAgIH1cblxuICAgICAgICAmOmFjdGl2ZSB7XG4gICAgICAgICAgdHJhbnNmb3JtOiB0cmFuc2xhdGVZKDFweCk7XG4gICAgICAgIH1cblxuICAgICAgICAvLyBTdHlsZSB0aGUgcmVzZXQgYnV0dG9uIGRpZmZlcmVudGx5XG4gICAgICAgICY6bnRoLWNoaWxkKDIpIHtcbiAgICAgICAgICB3aWR0aDogYXV0bztcbiAgICAgICAgICBwYWRkaW5nOiAwIDEycHg7XG4gICAgICAgICAgZm9udC1zaXplOiAxNHB4O1xuICAgICAgICB9XG4gICAgICB9XG4gICAgfVxuICB9XG59XG4iXX0= */</style><link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" type="text/css" spa-preserve/><script src="../../../../prescript.js" type="application/javascript" spa-preserve></script><script type="application/javascript" spa-preserve>const fetchData = fetch("../../../../static/contentIndex.json").then(data => data.json())</script><link rel="alternate" type="application/rss+xml" title="RSS Feed" href="https://jin-sukkim.github.io/Blog/index.xml"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta property="og:image" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-03---Direct3D-og-image.webp"/><meta property="og:image:url" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-03---Direct3D-og-image.webp"/><meta name="twitter:image" content="https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/엔진-개발-03---Direct3D-og-image.webp"/><meta property="og:image:type" content="image/.webp"/></head><body data-slug="content/Projects/JEngine---DX12/DirectX12/엔진-개발-03---Direct3D"><div id="quartz-root" class="page"><div id="quartz-body"><div class="left sidebar"><h2 class="page-title"><a href="../../../..">JEngine</a></h2><div class="spacer mobile-only"></div><div class="flex-component" style="flex-direction: row; flex-wrap: nowrap; gap: 1rem;"><div style="flex-grow: 1; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><div class="search"><button class="search-button"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7"><title>Search</title><g class="search-path" fill="none"><path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"></path><circle cx="8" cy="8" r="7"></circle></g></svg><p>Search</p></button><div class="search-container"><div class="search-space"><input autocomplete="off" class="search-bar" name="search" type="text" aria-label="Search for something" placeholder="Search for something"/><div class="search-layout" data-preview="true"></div></div></div></div></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="darkmode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="dayIcon" x="0px" y="0px" viewBox="0 0 35 35" style="enable-background:new 0 0 35 35" xml:space="preserve" aria-label="Dark mode"><title>Dark mode</title><path d="M6,17.5C6,16.672,5.328,16,4.5,16h-3C0.672,16,0,16.672,0,17.5    S0.672,19,1.5,19h3C5.328,19,6,18.328,6,17.5z M7.5,26c-0.414,0-0.789,0.168-1.061,0.439l-2,2C4.168,28.711,4,29.086,4,29.5    C4,30.328,4.671,31,5.5,31c0.414,0,0.789-0.168,1.06-0.44l2-2C8.832,28.289,9,27.914,9,27.5C9,26.672,8.329,26,7.5,26z M17.5,6    C18.329,6,19,5.328,19,4.5v-3C19,0.672,18.329,0,17.5,0S16,0.672,16,1.5v3C16,5.328,16.671,6,17.5,6z M27.5,9    c0.414,0,0.789-0.168,1.06-0.439l2-2C30.832,6.289,31,5.914,31,5.5C31,4.672,30.329,4,29.5,4c-0.414,0-0.789,0.168-1.061,0.44    l-2,2C26.168,6.711,26,7.086,26,7.5C26,8.328,26.671,9,27.5,9z M6.439,8.561C6.711,8.832,7.086,9,7.5,9C8.328,9,9,8.328,9,7.5    c0-0.414-0.168-0.789-0.439-1.061l-2-2C6.289,4.168,5.914,4,5.5,4C4.672,4,4,4.672,4,5.5c0,0.414,0.168,0.789,0.439,1.06    L6.439,8.561z M33.5,16h-3c-0.828,0-1.5,0.672-1.5,1.5s0.672,1.5,1.5,1.5h3c0.828,0,1.5-0.672,1.5-1.5S34.328,16,33.5,16z     M28.561,26.439C28.289,26.168,27.914,26,27.5,26c-0.828,0-1.5,0.672-1.5,1.5c0,0.414,0.168,0.789,0.439,1.06l2,2    C28.711,30.832,29.086,31,29.5,31c0.828,0,1.5-0.672,1.5-1.5c0-0.414-0.168-0.789-0.439-1.061L28.561,26.439z M17.5,29    c-0.829,0-1.5,0.672-1.5,1.5v3c0,0.828,0.671,1.5,1.5,1.5s1.5-0.672,1.5-1.5v-3C19,29.672,18.329,29,17.5,29z M17.5,7    C11.71,7,7,11.71,7,17.5S11.71,28,17.5,28S28,23.29,28,17.5S23.29,7,17.5,7z M17.5,25c-4.136,0-7.5-3.364-7.5-7.5    c0-4.136,3.364-7.5,7.5-7.5c4.136,0,7.5,3.364,7.5,7.5C25,21.636,21.636,25,17.5,25z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="nightIcon" x="0px" y="0px" viewBox="0 0 100 100" style="enable-background:new 0 0 100 100" xml:space="preserve" aria-label="Light mode"><title>Light mode</title><path d="M96.76,66.458c-0.853-0.852-2.15-1.064-3.23-0.534c-6.063,2.991-12.858,4.571-19.655,4.571  C62.022,70.495,50.88,65.88,42.5,57.5C29.043,44.043,25.658,23.536,34.076,6.47c0.532-1.08,0.318-2.379-0.534-3.23  c-0.851-0.852-2.15-1.064-3.23-0.534c-4.918,2.427-9.375,5.619-13.246,9.491c-9.447,9.447-14.65,22.008-14.65,35.369  c0,13.36,5.203,25.921,14.65,35.368s22.008,14.65,35.368,14.65c13.361,0,25.921-5.203,35.369-14.65  c3.872-3.871,7.064-8.328,9.491-13.246C97.826,68.608,97.611,67.309,96.76,66.458z"></path></svg></button></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="readermode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="readerIcon" fill="currentColor" stroke="currentColor" stroke-width="0.2" stroke-linecap="round" stroke-linejoin="round" width="64px" height="64px" viewBox="0 0 24 24" aria-label="Reader mode"><title>Reader mode</title><g transform="translate(-1.8, -1.8) scale(1.15, 1.2)"><path d="M8.9891247,2.5 C10.1384702,2.5 11.2209868,2.96705384 12.0049645,3.76669482 C12.7883914,2.96705384 13.8709081,2.5 15.0202536,2.5 L18.7549359,2.5 C19.1691495,2.5 19.5049359,2.83578644 19.5049359,3.25 L19.5046891,4.004 L21.2546891,4.00457396 C21.6343849,4.00457396 21.9481801,4.28672784 21.9978425,4.6528034 L22.0046891,4.75457396 L22.0046891,20.25 C22.0046891,20.6296958 21.7225353,20.943491 21.3564597,20.9931534 L21.2546891,21 L2.75468914,21 C2.37499337,21 2.06119817,20.7178461 2.01153575,20.3517706 L2.00468914,20.25 L2.00468914,4.75457396 C2.00468914,4.37487819 2.28684302,4.061083 2.65291858,4.01142057 L2.75468914,4.00457396 L4.50368914,4.004 L4.50444233,3.25 C4.50444233,2.87030423 4.78659621,2.55650904 5.15267177,2.50684662 L5.25444233,2.5 L8.9891247,2.5 Z M4.50368914,5.504 L3.50468914,5.504 L3.50468914,19.5 L10.9478955,19.4998273 C10.4513189,18.9207296 9.73864328,18.5588115 8.96709342,18.5065584 L8.77307039,18.5 L5.25444233,18.5 C4.87474657,18.5 4.56095137,18.2178461 4.51128895,17.8517706 L4.50444233,17.75 L4.50368914,5.504 Z M19.5049359,17.75 C19.5049359,18.1642136 19.1691495,18.5 18.7549359,18.5 L15.2363079,18.5 C14.3910149,18.5 13.5994408,18.8724714 13.0614828,19.4998273 L20.5046891,19.5 L20.5046891,5.504 L19.5046891,5.504 L19.5049359,17.75 Z M18.0059359,3.999 L15.0202536,4 L14.8259077,4.00692283 C13.9889509,4.06666544 13.2254227,4.50975805 12.7549359,5.212 L12.7549359,17.777 L12.7782651,17.7601316 C13.4923805,17.2719483 14.3447024,17 15.2363079,17 L18.0059359,16.999 L18.0056891,4.798 L18.0033792,4.75457396 L18.0056891,4.71 L18.0059359,3.999 Z M8.9891247,4 L6.00368914,3.999 L6.00599909,4.75457396 L6.00599909,4.75457396 L6.00368914,4.783 L6.00368914,16.999 L8.77307039,17 C9.57551536,17 10.3461406,17.2202781 11.0128313,17.6202194 L11.2536891,17.776 L11.2536891,5.211 C10.8200889,4.56369974 10.1361548,4.13636104 9.37521067,4.02745763 L9.18347055,4.00692283 L8.9891247,4 Z"></path></g></svg></button></div></div><div class="explorer" data-behavior="link" data-collapsed="collapsed" data-savestate="true" data-data-fns="{&quot;order&quot;:[&quot;filter&quot;,&quot;map&quot;,&quot;sort&quot;],&quot;sortFn&quot;:&quot;(a,b)=>!a.isFolder&amp;&amp;!b.isFolder||a.isFolder&amp;&amp;b.isFolder?a.displayName.localeCompare(b.displayName,void 0,{numeric:!0,sensitivity:\&quot;base\&quot;}):!a.isFolder&amp;&amp;b.isFolder?1:-1&quot;,&quot;filterFn&quot;:&quot;node=>node.slugSegment!==\&quot;tags\&quot;&quot;,&quot;mapFn&quot;:&quot;node=>(node.name===\&quot;content\&quot;&amp;&amp;node.children&amp;&amp;(node.displayName=\&quot;\&quot;,node.collapsed=!1),node)&quot;}"><button type="button" class="explorer-toggle mobile-explorer hide-until-loaded" data-mobile="true" aria-controls="explorer-7"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-menu"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button><button type="button" class="title-button explorer-toggle desktop-explorer" data-mobile="false" aria-expanded="true"><h2>Explorer</h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><div id="explorer-7" class="explorer-content" aria-expanded="false" role="group"><ul class="explorer-ul overflow" id="list-0"><li class="overflow-end"></li></ul></div><template id="template-file"><li><a href="#"></a></li></template><template id="template-folder"><li><div class="folder-container"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="folder-icon"><polyline points="6 9 12 15 18 9"></polyline></svg><div><button class="folder-button"><span class="folder-title"></span></button></div></div><div class="folder-outer"><ul class="content"></ul></div></li></template></div></div><div class="center"><div class="page-header"><div class="popover-hint"><nav class="breadcrumb-container" aria-label="breadcrumbs"><div class="breadcrumb-element"><a href="../../../../">Home</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/">JEngine Blog</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/Projects/">Projects</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/Projects/JEngine---DX12/">JEngine   DX12</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../../../../content/Projects/JEngine---DX12/DirectX12/">DirectX12</a><p> ❯ </p></div><div class="breadcrumb-element"><a href>엔진 개발 03   Direct3D</a></div></nav><h1 class="article-title">엔진 개발 03 - Direct3D</h1><p show-comma="true" class="content-meta"><time datetime="2025-11-09T13:21:40.533Z">Nov 09, 2025</time><span>31 min read</span></p><ul class="tags"><li><a href="../../../../tags/Graphics" class="internal tag-link">Graphics</a></li><li><a href="../../../../tags/DirectX12" class="internal tag-link">DirectX12</a></li></ul></div></div><article class="popover-hint"><h2 id="목표">목표<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#목표" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>Direct3D의 역할 이해</li>
+<li>Direct3D에서 COM의 역할 이해</li>
+<li>2차원 이미지의 저장방식, 페이지 전환, 깊이 버퍼링 Multi-Sampling 같은 그래픽 개념</li>
+<li>성능 카운터 함수들을 이요해 고해상도 타이머 값을 얻기</li>
+<li>Direct3D 초기화</li>
+</ul>
+<h2 id="direct3d-12-개요">Direct3D 12 개요<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#direct3d-12-개요" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>Direct3D는 GPU를 제어하는 저수준 Graphics API
+<ul>
+<li>3차원 그래픽 가속 기능을 이용해 3D World를 렌더링 가능</li>
+</ul>
+</li>
+<li>응용 프로그램과 그래픽 하드웨어 사이에 Direct3D라는 Interface를 통해 GPU에 명령을 주는데 Driver가 내부적으로 해당 명령을 받아서 일하므로 세부사항은 걱정할 필요가 없음
+<ul>
+<li>단 NVIDIA, AMD, Intel 등 GPU 제조사의 Driver에서 DX12를 지원해야함</li>
+</ul>
+</li>
+<li>DX12에 몇 가지 새로운 렌더링 기능이 추가되었지만 이전 버전들고 비교하면 GPU의 부담을 줄이고 Multi-Thread 지원을 개선하기 위해 설계를 다시 했다는 점
+<ul>
+<li>이런 성능상의 목표를 달성하기 위해 DX12는 DX11보다 훨씬 낮은 수준의 API가 되었음</li>
+<li>즉, 사용하기 더 어려워졌다는 의미</li>
+</ul>
+</li>
+<li>DX12는 이저보다 추상화가 줄었고 개발자가 직접 관리해야 할 사항들이 늘어나 어려워졌지만 성능이 개선됨</li>
+</ul>
+<h2 id="com-component-object-model">COM (Component Object Model)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#com-component-object-model" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>COM은 DX의 프로그래밍 언어 독립성과 하위 호환성을 가능하게 해줌
+<ul>
+<li>즉, 굳이 C++가 아니라 다른 언어로도 프로그램을 만들면 Window(COM)이 알아서 DirectX에 연결해줌</li>
+<li>DirectX의 버전이 바뀌어도 호환됨</li>
+</ul>
+</li>
+<li>COM 객체를 흔히 COM Interface라고 부르지만 여기선 COM 객체를 C++ 클래스로 간주하고 사용해도 무방함
+<ul>
+<li>C++로 DX 응요 프로그램을 프로그래밍할 때 COM의 세부사항은 들어나지 않기 때문</li>
+</ul>
+</li>
+<li>알아야 할 것은 필요한 COM Interface를 갈리키는 포인터를 특별한 함수들을 이용하거나 다른 COM Interface의 Method를 이용해 얻는 방법 뿐임
+<ul>
+<li><code>new</code>로 직접 생성할 일은 없음</li>
+</ul>
+</li>
+<li>그리고 사용이 끝나면 <code>delete</code>으로 삭제하는게 아니라 Releate Method를 호출해줘야 함
+<ul>
+<li>참고로 COM 객체는 참조 횟수가 0이 되면 메모리에서 해제됨</li>
+</ul>
+</li>
+<li><strong>COM 객체의 수명 관리를 돕기 위해, Windows Runtime Library (WRL)은 <code>Microsoft::WRL::ComPtr</code> 이라는 클래스를 제공함</strong>
+<ul>
+<li><strong>사용하려면 <code>#include &lt;wrl.h></code>를 사용</strong></li>
+<li><strong>이 클래스는 COM 객체를 위한 smart pointer</strong></li>
+</ul>
+</li>
+<li>범위를 벗어난 ComPtr Instance는 COM 객체에 대해 자동으로 <code>Release</code>를 호출해 직접 호출할 필요가 없어짐</li>
+<li><strong>DX12에서 사용하는 중요한 3가지 Method</strong>
+<ul>
+<li><strong><code>Get</code> : COM Interface를 가리키는 포인터를 Return</strong>
+<ul>
+<li>해당 COM Interface Pointer 형식의 Paramter를 받는 함수를 호출할 때 흔히 사용됨</li>
+</ul>
+</li>
+<li><strong><code>GetAddressOf</code> : COM Interface를 가리키는 포인터의 Address를 Return</strong>
+<ul>
+<li>함수 매개변수를 통해 COM Interface Pointer를 돌려받을 때 흔히 사용됨</li>
+</ul>
+</li>
+<li><strong><code>Reset</code> : ComPtr Instance를 <code>nullptr</code>로 설정하고 COM Interface의 참조 횟수를 1 감소</strong>
+<ul>
+<li>이 함수를 사용하는 대신 직접 <code>nullptr</code>로 지정해도 됨</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>참고로 COM Interface들은 이름이 대문자 <code>I</code>로 시작함
+<ul>
+<li>ex) command list를 나타내는 COM Interface의 이름은 <code>ID3D12GraphicsCommandList</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="texture-형식">Texture 형식<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#texture-형식" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li><strong>2차원 Texture는 보통 이미지를 저장하지만 Normal, Depth 등 다른 필요한 값들도 저장할 수 있음</strong>
+<ul>
+<li><strong>범용적으로 사용 가능</strong></li>
+</ul>
+</li>
+<li>1차원 Texture나 3차원 Texture도 존재하는데 이 Texture는 단순히 Value Array인 것만은 아니고 Texture에 MipMap이 존재할 수 있고 GPU는 Filtering, Multi-Sampling 등의 특별한 연산을 Texture에 적용할 수 있음</li>
+<li>하지만  Texture에 아무 자료나 담을 수 있는 것은 아님
+<ul>
+<li>특정 Format의 자료 원소들만 담을 수 있는데 구체적인 형식은 <code>DXGI_FORMAT</code>이라는 Enum으로 지정</li>
+</ul>
+</li>
+<li><code>DXGI_FORMAT</code>의 몇 가지 Format
+<ul>
+<li><code>DXGI_FORMAT_R32G32B32_FLOAT</code> : 각 원소는 32bit 부동소수점 성분 3개</li>
+<li><code>DXGI_FORMAT_R16G16B16A16_UNROM</code> : 각 원소는 <code>[0, 1]</code> 범위의 16bit 성분 4개</li>
+<li><code>DXGI_FORMAT_R32G32_UINT</code> : 각 원소는 부호없은 32bit 정수 성분 2개</li>
+<li><code>DXGI_FORMAT_R8G8B8A_UNORM</code> : 각 원소는 <code>[0, 1]</code> 범위의 부호 있는 8bit 성분 4개</li>
+<li><code>DXGI_FORMAT_R8G8B8A8_SNORM</code> : 각 원소는 <code>[-1, 1]</code> 범위로 부호있는 8bit 정수 4개</li>
+<li><code>DXGI_FORMAT_R8G8B8A8_SINT</code> : 각 원소는 <code>[-128, 128]</code> 범위의 부호있는 8bit 정수 4개</li>
+<li><code>DXGI_FORMAT_R8G8B8A8_UINT</code> : 각 원소는 <code>[0, 255]</code> 범위의 부호없는 8bit 정수 4개</li>
+</ul>
+</li>
+<li>R = Red, G = Green, B = Blue, A = Alpha 성분을 의미</li>
+<li>그래픽에서 하나의 색상은 3원색인 적, 녹, 청 조합으로 만들어짐
+<ul>
+<li>ex) 노란색 = 빨간색 + 노란색</li>
+</ul>
+</li>
+<li>Alpha는 일반적으로 투명도를 제어하는데 사용되는데 Texture에 반드시 색상을 담아야 하는건 아님
+<ul>
+<li>그래서 <code>DXGI_FORMAT_R32G32B32_FLOAT</code>에 색상값이 아니라 3차원 벡터를 담을 수 있음</li>
+</ul>
+</li>
+<li>typeless Texture들도 있는데 이런 Texture는 일단 메모리만 확보해두고 자료의 구체적인 해석 방식은 나중에 Texture를 Pipeline에 묶을 때 지정하는(C++의 reinterpret_cast와 비슷하게) 용도로 사용됨
+<ul>
+<li>ex) <code>DXGI_FORMAT_R16G16B16A16_TYPELESS</code> : 16bit 성분 4개를 할당하되 각 16bit의 구체적인 자료 형식 (int, float, uint 등)은 지정하지 않음</li>
+</ul>
+</li>
+<li>나중에 사용되는데 <code>DXGI_FORMAT</code> Enum은 Vertex 자료 형식과 Index 자료 형식을 서술할 때도 사용됨</li>
+</ul>
+<h2 id="swap-chain과-page-전환">Swap-Chain과 Page 전환<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#swap-chain과-page-전환" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>Animation의 한 Frame 전체를 화면 바깥의(off-screen) Texture에 그려줌
+<ul>
+<li>이 Texture를 Back Buffer라고 부름</li>
+</ul>
+</li>
+<li>주어진 한 Frame을 위해 장면 전체를 Back Buffer에 그린 다음에는, 그 Back Buffer를 하나의 완전한 Frame으로서 화면에 표시함
+<ul>
+<li>이러면 화면을 보는 사용자에게는 Frame이 그려지는 과정이 나타나지 않음</li>
+<li>이걸 Double Buffering이라 부름</li>
+</ul>
+</li>
+<li>이중 버퍼링을 효율적으로 구현하려면 하드웨어로 관리되는 2개의 Texture buffer가 필요한데, 하나응 Front Bufefr이고 다른 하나는 Back Buffer</li>
+<li>화면에는 Front Buffer에 담긴 이미지 자료가 표시되는데 이 시간 동안 다음 Frame을 Back Buffer에 그리고 다 그려지면 Front Buffer와 Back Buffer의 역할을 맞바꿈
+<ul>
+<li><img src="../../../../DX12_Double_Buffering.png" width="auto" height="auto" alt/></li>
+<li>이렇게 Back Buffer와 Front Buffer의 역할을 교환해서 Page가 전환되게 하는 것을 Direct3D에서는 Presenting이라고 부름</li>
+<li>효율적인 방식인데 Buffer의 내용을 바꾸는게 아니라 포인터만 서로 바꿔주면 되기 때문</li>
+</ul>
+</li>
+<li>Front Buffer와 Back Buffer는 하나의 Swap Chain을 형성하는데 Direct3D에서 이걸 <code>IDXGISwapChain</code>이란 Interface가 담당함</li>
+<li>이 Interface는 Front Buffer Texture와 Back Buffer Texture를 담으며, Buffer 크기 변경을 위한 Method(<code>IDXGISwapChain::ResizeBuffers</code>)와 Buffer의 화면에 그리기 위한 Method(<code>IDXGISwapChain:Present</code>)도 제공</li>
+<li>Buffer를 3개 사용하면 Triple Buffering이라고 부름</li>
+<li>참고로 Back Buffer는 Texture이므로 원소를 Texel이라고 불러야 하지만, 그냥 pixel이라고 부르는 경우도 많음
+<ul>
+<li>이는 색상 정보를 담기 때문으로 색상이 아닌 정보를 담은 Texture의 원소를 Pixel이라고 부르기도 하긴 함</li>
+</ul>
+</li>
+</ul>
+<h2 id="depth-buffering">Depth Buffering<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#depth-buffering" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>각 픽셀에 Depth 정보를 저장</li>
+<li>픽셀의 깊이는 <code>[0.0, 1.0]</code> 범위로 <code>0.0</code>은 view frustum 안에서 가장 가까운 Near Plane 위의 물체에 해당, <code>1.0</code>은 가장 먼, Far Plane에 해당함</li>
+<li>Depth Buffer의 원소들과 Back Buffer의 pixel들은 1대 1로 대응됨</li>
+<li>여러 물체들을 렌더링할때 한 물체의 픽셀들이 다른 물체보다 앞에 있는지 판정하기 위해 Depth Buffer 또는 Z-Buffering이라는 기법을 사용
+<ul>
+<li>중요한 점은, Depth Buffering을 이요하면 물체들을 그리는 순서와 무관하게 물체들이 제대로 가려진다는 점</li>
+</ul>
+</li>
+<li>응용 프로그램은 렌더링을 수행하기 전에 먼저 Back Buffer를 기본 색상(검은색이나 흰색 등 지정 가능)으로 지워줌
+<ul>
+<li>이때 Depth Buffer도 기본값으로 지워지는데 일반적으로 한 픽셀이 가질 수 있는 최대 깊이인 <code>1.0</code>을 기본값으로 사용</li>
+</ul>
+</li>
+<li>물체를 렌더링할때 해당 물체의 픽셀의 깊이 값을 알 수 있는데 이때 Depth Buffer에 저장된 깊이값도가 작은 경우에만 Back Buffer와 Depth Buffer에 저장됨
+<ul>
+<li>이런 방식으로 인해 가장 가까운 물체의 픽셀이 렌더링됨</li>
+</ul>
+</li>
+<li>즉, Depth Buffering Algorithm은 렌더링되는 각 픽셀의 깊이 값을 계산해서 Depth Testing을 수행해 가까운걸 렌더링하는 방식
+<ul>
+<li>Depth Testing은 Back Buffer의 특정 픽셀 위치에 기록될 픽셀들의 Depth들을 비교</li>
+<li>깊이 값을 비교했을때 더 가까운 픽셀의 색을 저장</li>
+</ul>
+</li>
+<li><strong>Depth Buffer는 하나의 Texture이므로 생성 시 특정한 Format을 지정해줘야 함</strong>
+<ul>
+<li><code>DXGI_FORMAT_D32_FLOAT_S8X25_UINT</code> : 각 Texel은 32bit 부동소수점 Depth 값과 <code>[0, 255]</code> 범위의 부호없는 8bit 정수 Stencil 값, 그리고 다른 용도 없이 padding 용으로만 쓰이는 24bit로 구성</li>
+<li><code>DXGI_FORMAT_D32_FLOAT</code> : 각 Texel은 하나의 32bit 부동소수점 깊이값</li>
+<li><code>DXGI_FORMAT_D24_UNORM_S8_UINT</code> : 각 Texel은 <code>[0, 1]</code> 구간으로 부호없는 24bit 깊이값 하나의 <code>[0, 255]</code> 범위의 부호없는 8bit 정수 Stencil 값으로 구성</li>
+<li><code>DXGI_FORMAT_D16_UNORM</code> : 각 Texel은 <code>[0, 1]</code> 범위로 부호없는 16bit Depth값</li>
+</ul>
+</li>
+<li><strong>참고로 Stecil Buffer는 반드시 사용해야 하는 것은 아니나, 만일 사용한다면 Stencil Buffer는 항상 Depth Buffer와 같은 Texture에 포함됨</strong>
+<ul>
+<li>그래서 보통 Depth-Stencil Buffer라고 불림</li>
+</ul>
+</li>
+</ul>
+<h2 id="resource와-descriptor">Resource와 Descriptor<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#resource와-descriptor" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>렌더링 과정에서 CPU는 Resource들에 Write하거나 Read함</li>
+<li>Rendering 명령을 제출하기 전에, 먼저 해당 Renering 호출이 참조할 자원들을 렌더링 파이프라인에 묶어야(bind)함
+<ul>
+<li>이걸 자원을 파이프라인에 연결(Link) 또는 Binding한다고 함</li>
+</ul>
+</li>
+<li>Rendering 호출마다 달라지는 자원들도 있으며, 따라서 필요하다면 Rendering 호출마다 자원들의 Binding을 갱심해야 함</li>
+<li>그런데 GPU 자원들이 파이프라인에 직접 Binding되는게 아니라 이 자원을 참조하는 Descriptor 객체를 Binding해줌</li>
+<li><strong>Descriptor는 Resource를 GPU에 간접적으로 Binding할 수 있게 해줌</strong>
+<ul>
+<li>Vulkan에서도 Descriptor, Desciptor Set등을 사용했음</li>
+</ul>
+</li>
+<li>이렇게 간접층을 두는 이뉴는 GPU 자원이라는 것이 사실상 범용적인 메모리 조각이기 때문
+<ul>
+<li>자원은 범용적이므로, 같은 자원을 렌더링 파이프라인의 서로 다른 단계(Stage)들에서 사용할 수 있음</li>
+<li>ex) Write하는 Render Target으로 사용하는데 다른곳에서 Read하는 Texture로 사용할 수 있음</li>
+<li>자원 자체는 Write/Read에 대해서 구분하지 않음</li>
+</ul>
+</li>
+<li>또한, 자원의 일부 영역만 렌더링 파이프라인에묶오 싶은 때가 있는데, 자우너 자체에는 이런 정보가 없고 애초에 자원을 형식없이 생성할 수 있음
+<ul>
+<li>무형식으로 만들면 GPU는 자원의 형식을 알 수 없음</li>
+</ul>
+</li>
+<li>Descriptor는 Resource를 지정하는 수단일 뿐만 아니라, Resource를 GPU에 어떻게 사용할지 알려주는 것이기도 함
+<ul>
+<li>Direct3D에게 자원의 사용법(Resource를 Pipeline의 어떤 Stage에 묶어야할지 등)을 알려줌</li>
+<li>가능한 경우 Pipeline에 묶을 자원의 부분 영역을 Descriptor로 지정할 수 있음</li>
+<li><strong>무형식으로 생성된 자원의 경우, 그 자원을 참조하는 Descriptor를 생성할 때 그 자원의 구체적인 형식을 명시할 수 있음</strong>
+<ul>
+<li>이것도 엔진 만들때 좋을 듯</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>참고로 <strong>Veiw는 Descriptor와 동의어</strong>
+<ul>
+<li>View라는 용어는 DX12 이전 버전들에서 사영되었고 DX12에서도 일부 사용되고 있음</li>
+</ul>
+</li>
+<li>Descriptor는 Resource의 사용버에 따라 여러 종류(형식)이 존재
+<ul>
+<li>Constant Buffer = CBV</li>
+<li>Shader Resource = SRV</li>
+<li>Unordered Access View = UAV</li>
+<li>Sampler Descriptor는 Texture를 적용할때 쓰이는 Sampler를 설명</li>
+<li>Depth Stencil Buffer = DSV</li>
+</ul>
+</li>
+<li><strong>Descriptor Heap은 Descriptor들의 배열</strong>
+<ul>
+<li>프로그램이 사용하는 Descriptor들이 저장되는 곳이 Descriptor Heap</li>
+<li>Descriptor 종류마다 개별적인 Descriptor Heap이 필요하고 같은 종류는 같은 Descriptor Heap에 저장됨</li>
+<li>또한, 한 종류의 Descriptor에 대해 여러 개의 Heap을 사용할 수 있음</li>
+</ul>
+</li>
+<li>하나의 Resource를 참조하는 Descriptor가 1개뿐이어야 하는 것은 아님
+<ul>
+<li>한 Resource의 여러 부분 영역을 여러 Descriptor가 참조할 수 있음</li>
+<li>또한, 하나의 자원을 렌더링 파이프라인의 여러 단계에서 Binding할 수 있는데, 단계마다 개별적인 Descriptor가 필요함
+<ul>
+<li>ex) 하나의 Texture를 Render Target이나 Shader Resource로 사용하는 경우, RTV 형식의 Descriptor와 SRV 형식의 Descriptor를 만들어 둘 다 사용</li>
+</ul>
+</li>
+<li>무형식 Resource를 만든 경우 Texture의 원소를 이를테면 부동소수점 값으로 사용할 수도 있고 정수로 사용할 수도 있는데, 이렇게 하려면 2개의 Descriptor, 즉 부동소수점 형식을 지정하는 Descriptor와 정수 형식을 지정하는 Descriptor 2개가 필요함</li>
+</ul>
+</li>
+<li><strong>Descriptor들은 프로그램 초기화 시점에서 생성해야 됨</strong>
+<ul>
+<li>이는 이때 일정 정도의 형식 점검과 유효성 검증이 일어나기 때문이고 초기화 시점에 생성하는 것이 실제 실행 시점에서 생성하는 것보다 좋음</li>
+<li>참고로 무형식 자원은 다양한 방식으로 해석할 필요가 있는 경우만 사용하고 아니면 형식을 꼭 지정해서 자원을 만들어야 Driver에서 최적화를 수행해줌</li>
+</ul>
+</li>
+</ul>
+<h2 id="multi-sampling-이론">Multi-Sampling 이론<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#multi-sampling-이론" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>계단 현상을 없애기 위한 Anti-Aliasing
+<ul>
+<li>Direct3D에서 지원하는 기법</li>
+</ul>
+</li>
+<li>일부 계산 결과를 subpixel들 사이에서 공유하기 때문에 Super Sampling 기법보다 비용이 적음
+<ul>
+<li>이미지 색상을 각 부분픽셀마다 계산하는 것이 아니라 픽셀당 한 번만 계산하고(픽셀의 중심에서), 그 색상과 부분픽셀들의 가시성(이를 위해 부분픽셀당 Depth-Stencil Testing을 함)과 포괄도(부분픽셀을 다각형이 어느 정도나 덮고 있는지를 뜻하는 값)을 이용해 최종 색살을 결정</li>
+</ul>
+</li>
+<li>하지만 결국 추가 계산이 필요하기에 실시간 렌더링에서는 사용하지 않거나 다른 방식을 주로 사용하는 경우가 많음</li>
+</ul>
+<h3 id="direct3d의-multi-sampling">Direct3D의 Multi-Sampling<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#direct3d의-multi-sampling" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<ul>
+<li><code>DXGI_SAMPLE_DESC</code>라는 구조체를 채워줘야 함</li>
+<li>이 구조체는 2개의 멤버 변수로 이루어져 있음</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>typedef struct DXGI_SAMPLE_DESC {</span></span>
+<span data-line><span>	UINT Count;</span></span>
+<span data-line><span>	UINT Quality;</span></span>
+<span data-line><span>} DXGI_SAMPLE_DESC;</span></span></code></pre></figure>
+<ul>
+<li><code>Count</code>는 픽셀당 추출할 표번의 개수를 지정</li>
+<li><code>Quality</code>는 원하는 Quality Level을 지정</li>
+<li>표본의 개수가 많을수록, 품질 수준이 높을수록 비용이 증가하므로, 비용과 속도 사이의 절충선을 잘 잡아야 함
+<ul>
+<li>Quality Level들의 범위는 Texture 형식과 픽셀당 표본 개수에 의존함</li>
+</ul>
+</li>
+<li>주어진 Texture 형식과 표본 개수의 조합에 대한 Quality Level들의 개수는 <code>ID3D12Device::CheckFeatureSupport</code>라는 method로 알아낼 수 있음
+<ul>
+<li>아래 코드는 사용 예시</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>typedef struct D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {</span></span>
+<span data-line><span>	DXGI_FORMAT Format;</span></span>
+<span data-line><span>	UINT SampleCount;</span></span>
+<span data-line><span>	D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG Flags;</span></span>
+<span data-line><span>	UINT NumQualityLevels;</span></span>
+<span data-line><span>} D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS;</span></span>
+<span data-line> </span>
+<span data-line><span>D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;</span></span>
+<span data-line><span>msQualityLevel.Format = mBackBufferFormat;</span></span>
+<span data-line><span>msQualityLevel.SampleCount = 4;</span></span>
+<span data-line><span>msQualityLevel.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;</span></span>
+<span data-line><span>msQualityLevel.NumQualityLevels = 0;</span></span>
+<span data-line><span>ThrowIfFailed(md3dDevice->CheckFeatureSupport(</span></span>
+<span data-line><span>	D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,</span></span>
+<span data-line><span>	&amp;msQualityLevel,</span></span>
+<span data-line><span>	sizeof(msQualityLevel)</span></span>
+<span data-line><span>));</span></span></code></pre></figure>
+<ul>
+<li>이 Method의 둘째 매개변수가 입력과 출력 모두에 쓰인다는 점으로 둘째 매개변수로 지정된 구조체에서 Texture 형식과 표본 개수를 읽고, 그에 해당하는 품질 수준 개수를 그 구조체의 <code>NumQualityLevels</code> 멤버에 설정함</li>
+<li>주어진 Texture 형식과 표본 개수의 조합에 대해 유효한 품질 수준들은 0에서 <code>NumQualityLevels - 1</code>까지임
+<ul>
+<li>한 픽셀에서 추출할 수 있는 최대 표본 개수는 다음과 같이 정의</li>
+<li><code>#define D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT (32)</code></li>
+</ul>
+</li>
+<li>그러나 실제로는 성능 및 메모리 비용의 절충선으로 표본을 4개나 8개만 추출하는 경우가 많음
+<ul>
+<li><strong>Multi-Sampling을 사용하고 싶지 않으면 SampleCount를 1로, QualityLevel을 0으로 설정하면 됨</strong></li>
+</ul>
+</li>
+<li>참고로 <code>DXGI_SAMPLE_DESC</code> 구조체는 Swap-Chain Buffer들과 Depth Buffer 모두에 필요함
+<ul>
+<li>또한 Back Buffer와 Depth Buffer를 생성할 때 동일한 Multi-Sample 설정을 적용해야 함</li>
+</ul>
+</li>
+</ul>
+<h2 id="feature-level">Feature Level<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#feature-level" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li><code>D3D_FEATURE_LEVEL</code>이라는 Enum으로 사용하는데 대략 DirectX의 버전 9부터 12까지의 버전들에 대응됨</li>
+<li>GPU가 지원하는 기능들의 집합을 정의
+<ul>
+<li>GPU에서 이 버전을 지원하는지 확인하는 과정이 필요하고 어떤 버전을 사용할지 지정해주면 됨</li>
+</ul>
+</li>
+</ul>
+<h2 id="dxgi-directx-graphics-infrastructure">DXGI (DirectX Graphics Infrastructure)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#dxgi-directx-graphics-infrastructure" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>DXGI는 Direct3D와 함께 쓰이는 API
+<ul>
+<li>DXGI의 기본 개념은 여러 그래픽 APi들에 공통인 그래픽 관련 작업들이 존재한다는 것</li>
+<li>ex) 2차원 애니메이션을 위해선 2차원 렌더링 API에도 3차원 렌더링 API처럼 swap-chain이 필요함
+<ul>
+<li>그래서 swap-chain을 대표하는 interface인 <code>IDXGISwapChain</code>은 실제로 DXGI API의 일부 (Direct3D API가 아님)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>즉, DXGI는 공통적인 그래픽 기능을 처리함
+<ul>
+<li>전체 화면 모드 전환, 디스플레이 어댑터, 모니터, 지원되는 디스플레이 모드(해상도, Frame 등) 같은 그래픽 시스템 정보를 확인 등의 기능을 제공</li>
+<li>지원되는 표현 형식들도 DXGI에 정의되어 있음
+<ul>
+<li><code>DXGI_FORMAT</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="direct3d-초기화-과정에-사용되는-dxgi-개념들과-interface들">Direct3D 초기화 과정에 사용되는 DXGI 개념들과 Interface들<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#direct3d-초기화-과정에-사용되는-dxgi-개념들과-interface들" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<ul>
+<li><strong><code>IDXGIFactory</code> : <code>IDXGISwapChain</code> Interface 생성과 디스플레이 어댑터 관련해서 사용됨</strong>
+<ul>
+<li>Display adapter는 그래픽 기능성을 구현
+<ul>
+<li><strong>Display Adapter는 물리적인 하드웨어 장치 (GPU)</strong></li>
+<li>하드웨어 그래픽 기능을 휴앤내는 소프트웨어 디스플레이 어댑터도 존재함</li>
+</ul>
+</li>
+<li>하나의 시스템에 여러 개의 어댑터가 있을 수 있음 (여러 GPU를 사용하는 경우)</li>
+</ul>
+</li>
+<li><strong><code>IDXGIAdapter</code> : Display Adapter를 대표하는 Interface</strong>
+<ul>
+<li>아래의 함수는 시스템에 있는 모든 Adapter를 출력하는 방법</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>void D3DApp::LogAdapters()</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    UINT i = 0;</span></span>
+<span data-line><span>    IDXGIAdapter* adapter = nullptr;</span></span>
+<span data-line><span>    std::vector&lt;IDXGIAdapter*> adapterList;</span></span>
+<span data-line><span>    while(mdxgiFactory->EnumAdapters(i, &amp;adapter) != DXGI_ERROR_NOT_FOUND)</span></span>
+<span data-line><span>    {</span></span>
+<span data-line><span>        DXGI_ADAPTER_DESC desc;</span></span>
+<span data-line><span>        adapter->GetDesc(&amp;desc);</span></span>
+<span data-line> </span>
+<span data-line><span>        std::wstring text = L&quot;***Adapter: &quot;;</span></span>
+<span data-line><span>        text += desc.Description;</span></span>
+<span data-line><span>        text += L&quot;\n&quot;;</span></span>
+<span data-line> </span>
+<span data-line><span>        OutputDebugString(text.c_str());</span></span>
+<span data-line> </span>
+<span data-line><span>        adapterList.push_back(adapter);</span></span>
+<span data-line><span>        </span></span>
+<span data-line><span>        ++i;</span></span>
+<span data-line><span>    }</span></span>
+<span data-line> </span>
+<span data-line><span>    for(size_t i = 0; i &lt; adapterList.size(); ++i)</span></span>
+<span data-line><span>    {</span></span>
+<span data-line><span>        LogAdapterOutputs(adapterList[i]);</span></span>
+<span data-line><span>        ReleaseCom(adapterList[i]);</span></span>
+<span data-line><span>    }</span></span>
+<span data-line><span>}</span></span></code></pre></figure>
+<ul>
+<li><strong><code>IDXGIOutput</code> : 디스플레이 출력을 대표하는 Interface로 모니터가 대표적인 디스플레이 출력의 한 예시</strong>
+<ul>
+<li>각 어댑터에는 출력들의 목록이 연관되어 있음</li>
+<li>ex) 그래픽 카드가 2개, 모니터가 3개 연결되어 있으며 세 모니터 중 둘은 한 GPU에, 나머지 하나는 다른 한 GPU에 물려있다면 각각 GPU에 연결된 출력 목록을 확인할 수 있음</li>
+<li>아래는 한 어댑터에 연관된 모든 출력을 확인하는 코드로 위의 어댑터를 확인하며 동시에 확인해줌</li>
+</ul>
+</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>void D3DApp::LogAdapterOutputs(IDXGIAdapter* adapter)</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    UINT i = 0;</span></span>
+<span data-line><span>    IDXGIOutput* output = nullptr;</span></span>
+<span data-line><span>    while(adapter->EnumOutputs(i, &amp;output) != DXGI_ERROR_NOT_FOUND)</span></span>
+<span data-line><span>    {</span></span>
+<span data-line><span>        DXGI_OUTPUT_DESC desc;</span></span>
+<span data-line><span>        output->GetDesc(&amp;desc);</span></span>
+<span data-line><span>        </span></span>
+<span data-line><span>        std::wstring text = L&quot;***Output: &quot;;</span></span>
+<span data-line><span>        text += desc.DeviceName;</span></span>
+<span data-line><span>        text += L&quot;\n&quot;;</span></span>
+<span data-line><span>        OutputDebugString(text.c_str());</span></span>
+<span data-line> </span>
+<span data-line><span>        LogOutputDisplayModes(output, mBackBufferFormat);</span></span>
+<span data-line> </span>
+<span data-line><span>        ReleaseCom(output);</span></span>
+<span data-line> </span>
+<span data-line><span>        ++i;</span></span>
+<span data-line><span>    }</span></span>
+<span data-line><span>}</span></span></code></pre></figure>
+<ul>
+<li><strong><code>DXGI_MODE_DESC</code> : 하나의 모니터는 여러 Display Mode를 지원하는데 이 구조체는 하나의 Display Mode를 설명하는 멤버들이 저장됨</strong></li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>typedef struct DXGI_MODE_DESC</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    UINT Width; // 가로 해상도</span></span>
+<span data-line><span>    UINT Height; // 세로 해상도</span></span>
+<span data-line><span>    DXGI_RATIONAL RefreshRate;</span></span>
+<span data-line><span>    DXGI_FORMAT Format; // 디스플레이 형식</span></span>
+<span data-line><span>    DXGI_MODE_SCANLINE_ORDER ScanlineOrdering; // 스캔 방식 : Progressive or interlaced</span></span>
+<span data-line><span>    DXGI_MODE_SCALING Scaling; // 영상을 모니터 크기에 맞게 늘리거나 줄이는 방식</span></span>
+<span data-line><span>} DXGI_MODE_DESC;</span></span>
+<span data-line> </span>
+<span data-line><span>typedef struct DXGI_RATIONAL</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    UINT Numerator;</span></span>
+<span data-line><span>    UINT Denominator;</span></span>
+<span data-line><span>} DXGI_RATIONAL;</span></span>
+<span data-line> </span>
+<span data-line><span>typedef enum DXGI_MODE_SCANLINE_ORDER</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED        = 0,</span></span>
+<span data-line><span>    DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE        = 1,</span></span>
+<span data-line><span>    DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST  = 2,</span></span>
+<span data-line><span>    DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST  = 3</span></span>
+<span data-line><span>} DXGI_MODE_SCANLINE_ORDER;</span></span>
+<span data-line> </span>
+<span data-line><span>typedef enum DXGI_MODE_SCALING</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    DXGI_MODE_SCALING_UNSPECIFIED   = 0,</span></span>
+<span data-line><span>    DXGI_MODE_SCALING_CENTERED      = 1,</span></span>
+<span data-line><span>    DXGI_MODE_SCALING_STRETCHED     = 2</span></span>
+<span data-line><span>} DXGI_MODE_SCALING;</span></span></code></pre></figure>
+<ul>
+<li>아래의 코드는 주어진 출력과 디스플레이 형식을 지원하는 모든 디스플레이 모드를 담은 목록을 얻는 방법</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>void D3DApp::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)</span></span>
+<span data-line><span>{</span></span>
+<span data-line><span>    UINT count = 0;</span></span>
+<span data-line><span>    UINT flags = 0;</span></span>
+<span data-line> </span>
+<span data-line><span>    // Call with nullptr to get list count.</span></span>
+<span data-line><span>    output->GetDisplayModeList(format, flags, &amp;count, nullptr);</span></span>
+<span data-line> </span>
+<span data-line><span>    std::vector&lt;DXGI_MODE_DESC> modeList(count);</span></span>
+<span data-line><span>    output->GetDisplayModeList(format, flags, &amp;count, &amp;modeList[0]);</span></span>
+<span data-line> </span>
+<span data-line><span>    for(auto&amp; x : modeList)</span></span>
+<span data-line><span>    {</span></span>
+<span data-line><span>        UINT n = x.RefreshRate.Numerator;</span></span>
+<span data-line><span>        UINT d = x.RefreshRate.Denominator;</span></span>
+<span data-line><span>        std::wstring text =</span></span>
+<span data-line><span>            L&quot;Width = &quot; + std::to_wstring(x.Width) + L&quot; &quot; +</span></span>
+<span data-line><span>            L&quot;Height = &quot; + std::to_wstring(x.Height) + L&quot; &quot; +</span></span>
+<span data-line><span>            L&quot;Refresh = &quot; + std::to_wstring(n) + L&quot;/&quot; + std::to_wstring(d) +</span></span>
+<span data-line><span>            L&quot;\n&quot;;</span></span>
+<span data-line> </span>
+<span data-line><span>        ::OutputDebugString(text.c_str());</span></span>
+<span data-line><span>    }</span></span>
+<span data-line><span>}</span></span></code></pre></figure>
+<ul>
+<li>이런 디스플레이 모드 확인은 전체 화면 모드로 갈 떄 특히나 중요함
+<ul>
+<li>전체 화면 성능을 극대화하려면, 지정된 모드가 모니터가 지원하는 한 디스플레이 모드와 일치해야 됨</li>
+</ul>
+</li>
+<li>추가적인 DXGI 확인
+<ul>
+<li><a href="https://learn.microsoft.com/ko-kr/windows/win32/direct3ddxgi/d3d10-graphics-programming-guide-dxgi" class="external">DXGI 개요 - Win32 apps | Microsoft Learn<svg aria-hidden="true" class="external-icon" style="max-width:0.8em;max-height:0.8em;" viewBox="0 0 512 512"><path d="M320 0H288V64h32 82.7L201.4 265.4 178.7 288 224 333.3l22.6-22.6L448 109.3V192v32h64V192 32 0H480 320zM32 32H0V64 480v32H32 456h32V480 352 320H424v32 96H64V96h96 32V32H160 32z"></path></svg></a></li>
+</ul>
+</li>
+</ul>
+<h2 id="check-feature-support">Check Feature Support<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#check-feature-support" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li><code>{C++}ID3D12Device::CheckFeatureSupport</code> 함수를 사용해 위에선 Multi-Sampling 지원 여부를 점검했는데 이 함수로 여러 기능들을 확인할 수 있음</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>HRESULT ID3D12Device::CheckFeatureSupport( </span></span>
+<span data-line><span>    D3D12_FEATURE Feature,</span></span>
+<span data-line><span>    void *pFeatureSupportData,</span></span>
+<span data-line><span>    UINT FeatureSupportDataSize</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li><code>Feature</code> : 지원 여부를 점검할 기능들의 종류
+<ul>
+<li>다음과 같은 옵션 중 하나를 지정해야 됨</li>
+<li><code>{C++}D3D12_FEATURE_D3D12_OPTIONS</code> : Direct3D 12의 여러 기능</li>
+<li><code>{C++}D3D12_FEATURE_ARCHITECTURE</code> : 하드웨어 아키텍처 기능들</li>
+<li><code>{C++}D3D12_FEATURE_FEATURE_LEVELS</code> : Feature Levels (기능 버전?)</li>
+<li><code>{C++}D3D12_FEATURE_FORMAT_SUPPORT</code> : 주어진 Texture 형식에 대한 기능들 (ex: 해당 형식을 렌더 대상으로 사용할 수 있는지, Blender 적용 가능한지 등)</li>
+<li><code>{C++}D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS</code> : Multi-Sample 기능</li>
+</ul>
+</li>
+<li><code>pFeatureSupportData</code> : Feature의 지원 정보가 설정될 구조체를 가리키는 포인터
+<ul>
+<li>구조체의 구체적인 형식은 Feature 매개변수에 지정한 값에 따라 다름</li>
+<li>Feature에 지정한 옵션에 따라 해당 옵션의 객체를 가리키는 포인터를 넣어줘야 함</li>
+<li>ex) <code>{C++}D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS</code>로 Feature를 설정했다면 <code>{C++}D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS</code> 객체를 만들어 넣어줘야 함</li>
+</ul>
+</li>
+<li><code>FeatureSupportDataSize</code> : <code>pFeatureSupportData</code> 매개변수로 전달한 구조체의 크기</li>
+<li>이 <code>{C++}ID3D12Device::CheckFeatureSupport</code> 함수로 지원 여부를 점겅할 수 있는 기능들은 이외에도 아주 많은데 그중 다수는 고급 기능으로 나중에 SDK 문서를 확인</li>
+<li>아래의 코드는 이 함수를 사용하는 방법 예시</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>typedef struct D3D12_FEATURE_DATA_FEATURE_LEVELS {</span></span>
+<span data-line><span>	UINT NumFeatureLevels;</span></span>
+<span data-line><span>	const D3D_FEATURE_LEVEL *pFeatureLevelsRequested;</span></span>
+<span data-line><span>	D3D_FEATURE_LEVEL MaxSupportedFeatureLevel;</span></span>
+<span data-line><span>} D3D12_FEATURE_DATA_FEATURE_LEVELS;</span></span>
+<span data-line> </span>
+<span data-line><span>// D3D 11 기능을 가장 먼저 점검하고 마지막으로 D3D 9.3 기능 지원을 확인</span></span>
+<span data-line><span>D3D_FEATURE_LEVEL featureLevels[3] = {</span></span>
+<span data-line><span>	D3D_FEATURE_LEVEL_11_0,</span></span>
+<span data-line><span>	D3D_FEATURE_LEVEL_10_0,</span></span>
+<span data-line><span>	D3D_FEATURE_LEVEL_9_3</span></span>
+<span data-line><span>};</span></span>
+<span data-line> </span>
+<span data-line><span>D3D12_FEATURE_DATA_FEATURE_LEVELS featureLevelsInfo;</span></span>
+<span data-line><span>featureLevelsInfo.NumFeatureLevels = 3;</span></span>
+<span data-line><span>featureLevelsInfo.pFeatureLevelsRequested = featureLevels;</span></span>
+<span data-line><span>md3dDevice->CheckFeatureSupport(</span></span>
+<span data-line><span>	D3D12_FEATURE_FEATURE_LEVELS,</span></span>
+<span data-line><span>	&amp;featureLevelsInfo,</span></span>
+<span data-line><span>	sizeof(featureLevelsInfo)</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li>Feature Level은 <code>NumFeatureLevels</code>로 어떤걸 지원하는지 확인할 수 있음</li>
+<li>Multi-Sample의 경우 <code>NumQualityLevels</code>로 확인</li>
+</ul>
+<h2 id="residency">Residency<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#residency" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li>복잡한 게임은 Texture, 3차원 Mesh 등 수많은 자원을 사용함 그런데 이 자원들이 항상 GPU에 필요하지는 않음</li>
+<li>Direct3D 12에서는 자원을 GPU 메모리로부터 내림으로써(<code>{C++}Evict()</code>), 그리고 필요하면 다시 GPU에 올림으로써(<code>{C++}MakeResident()</code>)  자원의 Residency를 관리
+<ul>
+<li>Residency는 간단하게 말해 자원이 GPU 메모리에 들어 있는지의 여부를 의미</li>
+</ul>
+</li>
+<li>Residency 관리의 핵심은 사용하는 GPU 메모리의 양을 최소화하는 것
+<ul>
+<li>전체 게임에 필요한 자원들을 모두 GPU 메모리에 담지 못할 수 있고 다른 응용 프로그램에서 GPU 메모리를 사용해야 할 수 있으므로 관리가 꼭 필요함</li>
+<li>성능 측면에서 주의할 점은 같은 자원을 짧은 시간에 GPU 메모리에 넣었다 뺐다 하는 상황은 비용이 발생하기에 피해야 함
+<ul>
+<li>이상적으로는 한동안 사용하지 않을 자원들만 GPU 메모리에서 내려야 함</li>
+<li>ex) 게임의 레벨이나 지역이 바뀌는 시점에 필요없는 자원 내리기</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>기본적으로 자원을 생성하면 자원이 GPU 메모리에 입주하며, 파괴되면 메모리에서 나가는데 직접 제어할 수도 있음</li>
+</ul>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="C++" data-theme="github-light github-dark"><code data-language="C++" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>HRESULT ID3D12Device::MakeResident(</span></span>
+<span data-line><span>	UINT NumObjects,</span></span>
+<span data-line><span>	ID3D12Pageable *const *ppObjects</span></span>
+<span data-line><span>);</span></span>
+<span data-line> </span>
+<span data-line><span>HRESULT ID3D12Device::Evict(</span></span>
+<span data-line><span>	UINT NumObjects,</span></span>
+<span data-line><span>	ID3D12Pageable *const *ppObjects</span></span>
+<span data-line><span>);</span></span></code></pre></figure>
+<ul>
+<li>첫 번째 매개변수는 배열에 들어있는 자원들의 개수이고 두번째 매개변수는 <code>ID3D12Pageable</code> 자원들의 배열</li>
+<li>단순함과 프로그램이 작은 경우 상주성을 직접 관리하지 않을 수도 있음
+<ul>
+<li>추가정보는 문서를 확인</li>
+<li><a href="https://learn.microsoft.com/en-us/windows/win32/direct3d12/residency" class="external">Residency - Win32 apps | Microsoft Learn<svg aria-hidden="true" class="external-icon" style="max-width:0.8em;max-height:0.8em;" viewBox="0 0 512 512"><path d="M320 0H288V64h32 82.7L201.4 265.4 178.7 288 224 333.3l22.6-22.6L448 109.3V192v32h64V192 32 0H480 320zM32 32H0V64 480v32H32 456h32V480 352 320H424v32 96H64V96h96 32V32H160 32z"></path></svg></a></li>
+</ul>
+</li>
+</ul></article><hr/><div class="page-footer"><div class="giscus" data-repo="Jin-SukKim/Blog" data-repo-id="R_kgDOQHKGMA" data-category="General" data-category-id="DIC_kwDOQHKGMM4Cw975" data-mapping="url" data-strict="1" data-reactions-enabled="1" data-input-position="bottom" data-light-theme="light" data-dark-theme="dark" data-theme-url="https://jin-sukkim.github.io/Blog/static/giscus" data-lang="en"></div></div></div><div class="right sidebar"><div class="graph"><h3>Graph View</h3><div class="graph-outer"><div class="graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:1,&quot;scale&quot;:1.1,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.3,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:false,&quot;enableRadial&quot;:false}"></div><button class="global-graph-icon" aria-label="Global Graph"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 55 55" fill="currentColor" xml:space="preserve"><path d="M49,0c-3.309,0-6,2.691-6,6c0,1.035,0.263,2.009,0.726,2.86l-9.829,9.829C32.542,17.634,30.846,17,29,17
+                s-3.542,0.634-4.898,1.688l-7.669-7.669C16.785,10.424,17,9.74,17,9c0-2.206-1.794-4-4-4S9,6.794,9,9s1.794,4,4,4
+                c0.74,0,1.424-0.215,2.019-0.567l7.669,7.669C21.634,21.458,21,23.154,21,25s0.634,3.542,1.688,4.897L10.024,42.562
+                C8.958,41.595,7.549,41,6,41c-3.309,0-6,2.691-6,6s2.691,6,6,6s6-2.691,6-6c0-1.035-0.263-2.009-0.726-2.86l12.829-12.829
+                c1.106,0.86,2.44,1.436,3.898,1.619v10.16c-2.833,0.478-5,2.942-5,5.91c0,3.309,2.691,6,6,6s6-2.691,6-6c0-2.967-2.167-5.431-5-5.91
+                v-10.16c1.458-0.183,2.792-0.759,3.898-1.619l7.669,7.669C41.215,39.576,41,40.26,41,41c0,2.206,1.794,4,4,4s4-1.794,4-4
+                s-1.794-4-4-4c-0.74,0-1.424,0.215-2.019,0.567l-7.669-7.669C36.366,28.542,37,26.846,37,25s-0.634-3.542-1.688-4.897l9.665-9.665
+                C46.042,11.405,47.451,12,49,12c3.309,0,6-2.691,6-6S52.309,0,49,0z M11,9c0-1.103,0.897-2,2-2s2,0.897,2,2s-0.897,2-2,2
+                S11,10.103,11,9z M6,51c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S8.206,51,6,51z M33,49c0,2.206-1.794,4-4,4s-4-1.794-4-4
+                s1.794-4,4-4S33,46.794,33,49z M29,31c-3.309,0-6-2.691-6-6s2.691-6,6-6s6,2.691,6,6S32.309,31,29,31z M47,41c0,1.103-0.897,2-2,2
+                s-2-0.897-2-2s0.897-2,2-2S47,39.897,47,41z M49,10c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S51.206,10,49,10z"></path></svg></button></div><div class="global-graph-outer"><div class="global-graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:-1,&quot;scale&quot;:0.9,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.2,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:true,&quot;enableRadial&quot;:true}"></div></div></div><div class="toc desktop-only"><button type="button" class="toc-header" aria-controls="toc-2" aria-expanded="true"><h3>Table of Contents</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><ul id="list-1" class="toc-content overflow"><li class="depth-0"><a href="#목표" data-for="목표">목표</a></li><li class="depth-0"><a href="#direct3d-12-개요" data-for="direct3d-12-개요">Direct3D 12 개요</a></li><li class="depth-0"><a href="#com-component-object-model" data-for="com-component-object-model">COM (Component Object Model)</a></li><li class="depth-0"><a href="#texture-형식" data-for="texture-형식">Texture 형식</a></li><li class="depth-0"><a href="#swap-chain과-page-전환" data-for="swap-chain과-page-전환">Swap-Chain과 Page 전환</a></li><li class="depth-0"><a href="#depth-buffering" data-for="depth-buffering">Depth Buffering</a></li><li class="depth-0"><a href="#resource와-descriptor" data-for="resource와-descriptor">Resource와 Descriptor</a></li><li class="depth-0"><a href="#multi-sampling-이론" data-for="multi-sampling-이론">Multi-Sampling 이론</a></li><li class="depth-1"><a href="#direct3d의-multi-sampling" data-for="direct3d의-multi-sampling">Direct3D의 Multi-Sampling</a></li><li class="depth-0"><a href="#feature-level" data-for="feature-level">Feature Level</a></li><li class="depth-0"><a href="#dxgi-directx-graphics-infrastructure" data-for="dxgi-directx-graphics-infrastructure">DXGI (DirectX Graphics Infrastructure)</a></li><li class="depth-1"><a href="#direct3d-초기화-과정에-사용되는-dxgi-개념들과-interface들" data-for="direct3d-초기화-과정에-사용되는-dxgi-개념들과-interface들">Direct3D 초기화 과정에 사용되는 DXGI 개념들과 Interface들</a></li><li class="depth-0"><a href="#check-feature-support" data-for="check-feature-support">Check Feature Support</a></li><li class="depth-0"><a href="#residency" data-for="residency">Residency</a></li><li class="overflow-end"></li></ul></div><div class="backlinks"><h3>Backlinks</h3><ul id="list-2" class="overflow"><li><a href="../../../../content/Projects/JEngine---DX12/JEngine-Project" class="internal">JEngine Project</a></li><li class="overflow-end"></li></ul></div><div class="recent-notes desktop-only"><h3>최근 포스트</h3><ul class="recent-ul"><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../" class="internal">JEngine Blog</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:41.702Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/" class="internal">JEngine Blog</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:41.701Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/Study/AI/논문/SALMONN" class="internal">SALMONN</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:40.731Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/Study/AI/논문/APT---Adaptive-Pruning-and-Tuning-Pretrained-Language-Models-forEfficient-Training-and-Inference" class="internal">APT - Adaptive Pruning and Tuning Pretrained Language Models forEfficient Training and Inference</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:40.724Z">Nov 09, 2025</time></p></div></li><li class="recent-li"><div class="section"><div class="desc"><h3><a href="../../../../content/Projects/Project-설정법/VS2022-프로젝트-설정" class="internal">VS2022 프로젝트 설정</a></h3></div><p class="meta"><time datetime="2025-11-09T13:21:40.553Z">Nov 09, 2025</time></p></div></li></ul></div></div><footer class><ul><li><a href="https://github.com/Jin-SukKim">GitHub</a></li></ul><p>© 2025 Jin-SukKim</p></footer></div></div></body><script type="application/javascript">function n(){let t=this.parentElement;t.classList.toggle("is-collapsed");let e=t.getElementsByClassName("callout-content")[0];if(!e)return;let l=t.classList.contains("is-collapsed");e.style.gridTemplateRows=l?"0fr":"1fr"}function c(){let t=document.getElementsByClassName("callout is-collapsible");for(let e of t){let l=e.getElementsByClassName("callout-title")[0],s=e.getElementsByClassName("callout-content")[0];if(!l||!s)continue;l.addEventListener("click",n),window.addCleanup(()=>l.removeEventListener("click",n));let o=e.classList.contains("is-collapsed");s.style.gridTemplateRows=o?"0fr":"1fr"}}document.addEventListener("nav",c);
+</script><script type="module">function f(i,e){if(!i)return;function r(o){o.target===this&&(o.preventDefault(),o.stopPropagation(),e())}function t(o){o.key.startsWith("Esc")&&(o.preventDefault(),e())}i?.addEventListener("click",r),window.addCleanup(()=>i?.removeEventListener("click",r)),document.addEventListener("keydown",t),window.addCleanup(()=>document.removeEventListener("keydown",t))}function y(i){for(;i.firstChild;)i.removeChild(i.firstChild)}var h=class{constructor(e,r){this.container=e;this.content=r;this.setupEventListeners(),this.setupNavigationControls(),this.resetTransform()}isDragging=!1;startPan={x:0,y:0};currentPan={x:0,y:0};scale=1;MIN_SCALE=.5;MAX_SCALE=3;cleanups=[];setupEventListeners(){let e=this.onMouseDown.bind(this),r=this.onMouseMove.bind(this),t=this.onMouseUp.bind(this),o=this.resetTransform.bind(this);this.container.addEventListener("mousedown",e),document.addEventListener("mousemove",r),document.addEventListener("mouseup",t),window.addEventListener("resize",o),this.cleanups.push(()=>this.container.removeEventListener("mousedown",e),()=>document.removeEventListener("mousemove",r),()=>document.removeEventListener("mouseup",t),()=>window.removeEventListener("resize",o))}cleanup(){for(let e of this.cleanups)e()}setupNavigationControls(){let e=document.createElement("div");e.className="mermaid-controls";let r=this.createButton("+",()=>this.zoom(.1)),t=this.createButton("-",()=>this.zoom(-.1)),o=this.createButton("Reset",()=>this.resetTransform());e.appendChild(t),e.appendChild(o),e.appendChild(r),this.container.appendChild(e)}createButton(e,r){let t=document.createElement("button");return t.textContent=e,t.className="mermaid-control-button",t.addEventListener("click",r),window.addCleanup(()=>t.removeEventListener("click",r)),t}onMouseDown(e){e.button===0&&(this.isDragging=!0,this.startPan={x:e.clientX-this.currentPan.x,y:e.clientY-this.currentPan.y},this.container.style.cursor="grabbing")}onMouseMove(e){this.isDragging&&(e.preventDefault(),this.currentPan={x:e.clientX-this.startPan.x,y:e.clientY-this.startPan.y},this.updateTransform())}onMouseUp(){this.isDragging=!1,this.container.style.cursor="grab"}zoom(e){let r=Math.min(Math.max(this.scale+e,this.MIN_SCALE),this.MAX_SCALE),t=this.content.getBoundingClientRect(),o=t.width/2,n=t.height/2,c=r-this.scale;this.currentPan.x-=o*c,this.currentPan.y-=n*c,this.scale=r,this.updateTransform()}updateTransform(){this.content.style.transform=`translate(${this.currentPan.x}px, ${this.currentPan.y}px) scale(${this.scale})`}resetTransform(){this.scale=1;let e=this.content.querySelector("svg");this.currentPan={x:e.getBoundingClientRect().width/2,y:e.getBoundingClientRect().height/2},this.updateTransform()}},C=["--secondary","--tertiary","--gray","--light","--lightgray","--highlight","--dark","--darkgray","--codeFont"],E;document.addEventListener("nav",async()=>{let e=document.querySelector(".center").querySelectorAll("code.mermaid");if(e.length===0)return;E||=await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.esm.min.mjs");let r=E.default,t=new WeakMap;for(let n of e)t.set(n,n.innerText);async function o(){for(let s of e){s.removeAttribute("data-processed");let a=t.get(s);a&&(s.innerHTML=a)}let n=C.reduce((s,a)=>(s[a]=window.getComputedStyle(document.documentElement).getPropertyValue(a),s),{}),c=document.documentElement.getAttribute("saved-theme")==="dark";r.initialize({startOnLoad:!1,securityLevel:"loose",theme:c?"dark":"base",themeVariables:{fontFamily:n["--codeFont"],primaryColor:n["--light"],primaryTextColor:n["--darkgray"],primaryBorderColor:n["--tertiary"],lineColor:n["--darkgray"],secondaryColor:n["--secondary"],tertiaryColor:n["--tertiary"],clusterBkg:n["--light"],edgeLabelBackground:n["--highlight"]}}),await r.run({nodes:e})}await o(),document.addEventListener("themechange",o),window.addCleanup(()=>document.removeEventListener("themechange",o));for(let n=0;n<e.length;n++){let v=function(){let g=l.querySelector("#mermaid-space"),m=l.querySelector(".mermaid-content");if(!m)return;y(m);let w=c.querySelector("svg").cloneNode(!0);m.appendChild(w),l.classList.add("active"),g.style.cursor="grab",u=new h(g,m)},M=function(){l.classList.remove("active"),u?.cleanup(),u=null},c=e[n],s=c.parentElement,a=s.querySelector(".clipboard-button"),d=s.querySelector(".expand-button"),p=window.getComputedStyle(a),L=a.offsetWidth+parseFloat(p.marginLeft||"0")+parseFloat(p.marginRight||"0");d.style.right=`calc(${L}px + 0.3rem)`,s.prepend(d);let l=s.querySelector("#mermaid-container");if(!l)return;let u=null;d.addEventListener("click",v),f(l,M),window.addCleanup(()=>{u?.cleanup(),d.removeEventListener("click",v)})}});
+</script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.js" type="application/javascript"></script><script src="../../../../postscript.js" type="module"></script></html>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+    <channel>
+      <title>JEngine</title>
+      <link>https://jin-sukkim.github.io/Blog</link>
+      <description>Last 10 notes on JEngine</description>
+      <generator>Quartz -- quartz.jzhao.xyz</generator>
+      <item>
+    <title>JEngine Blog</title>
+    <link>https://jin-sukkim.github.io/Blog/</link>
+    <guid>https://jin-sukkim.github.io/Blog/</guid>
+    <description><![CDATA[ JEngine 블로그에 오신 것을 환영합니다! 🚀 이곳은 게임 엔진 개발과 컴퓨터 공학 관련 노트를 공유하는 공간입니다. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:41 GMT</pubDate>
+  </item><item>
+    <title>JEngine Blog</title>
+    <link>https://jin-sukkim.github.io/Blog/content/</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/</guid>
+    <description><![CDATA[ JEngine 블로그에 오신 것을 환영합니다! 🚀 이곳은 게임 엔진 개발과 컴퓨터 공학 관련 노트를 공유하는 공간입니다. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:41 GMT</pubDate>
+  </item><item>
+    <title>SALMONN</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Study/AI/%EB%85%BC%EB%AC%B8/SALMONN</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Study/AI/%EB%85%BC%EB%AC%B8/SALMONN</guid>
+    <description><![CDATA[ 모델의 목표 LLM에 일반적인 청각 능력을 부여한 멀티모달 기존에는 특정 작업에 특화된 모델들이 사용됬지만 좀 더 범용적인 모델을 위해 개발 이 논문의 도전 과제 서로 다른 오디오 작업을 하나의 모델에서 통합적으로 처리 ex) 음성 인식, 음악 설명, 감정 인식 등 새로운 오디오 작업이나 데이터에 대한 적응력 향상 처음보는 데이터를 처리할 수 있도록 다중 모달(텍스트 + 오디오) 데이터를 동시에 이해할 수 있는 능력 모델의 구조 두 가지 주요 컴포넌트로 구성 Text LLM 사전 학습된 텍스트 기반 LLM(GPT 계열) 사용 Aud... ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>APT - Adaptive Pruning and Tuning Pretrained Language Models forEfficient Training and Inference</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Study/AI/%EB%85%BC%EB%AC%B8/APT---Adaptive-Pruning-and-Tuning-Pretrained-Language-Models-forEfficient-Training-and-Inference</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Study/AI/%EB%85%BC%EB%AC%B8/APT---Adaptive-Pruning-and-Tuning-Pretrained-Language-Models-forEfficient-Training-and-Inference</guid>
+    <description><![CDATA[ Abtract LM의 Fine-tuning과 inference는 비용이 큰 거로 알려져 있어 PeFT로 적은 수의 파라미터를 사용해 훈련할 때 메모리 사용량을 줄이려고 하지만 inference는 향상시키지 못함 Structured Pruning은 inference를 향상시키지만 가끔 훈련 메모리와 시간을 증가시킴 training과 inference를 둘 다 향상시키기 위해서 APT를 사용 fine tuning의 초기 단계에서 중요하지 않은 파라미터를 버리면서 빠르고 정확한 수렴을 위해 salient tuning parameter를 ... ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>VS2022 프로젝트 설정</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Projects/Project-%EC%84%A4%EC%A0%95%EB%B2%95/VS2022-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EC%84%A4%EC%A0%95</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Projects/Project-%EC%84%A4%EC%A0%95%EB%B2%95/VS2022-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EC%84%A4%EC%A0%95</guid>
+    <description><![CDATA[ 프로젝트 구조 게임 엔진 프로젝트로써 Application이 Window 창의 띄우는 가장 중심이 되는 프로젝트가 됩니다. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>엔진 개발 01 - 프로젝트 초기 설정</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-01---%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EC%B4%88%EA%B8%B0-%EC%84%A4%EC%A0%95</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-01---%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EC%B4%88%EA%B8%B0-%EC%84%A4%EC%A0%95</guid>
+    <description><![CDATA[ 프로젝트 생성 엔진 프로젝트를 시작하기 하기 위해 Git과 VS2022 설정을 해줬습니다. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>엔진 개발 06 - Window 초기화</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-06---Window-%EC%B4%88%EA%B8%B0%ED%99%94</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-06---Window-%EC%B4%88%EA%B8%B0%ED%99%94</guid>
+    <description><![CDATA[ Window 창 생성 DirectX를 사용하기 위해서 Device 등 초기화를 할때 Window 창의 {C++}HWND 값이 필요합니다. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>엔진 개발 03 - Direct3D</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-03---Direct3D</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-03---Direct3D</guid>
+    <description><![CDATA[ 목표 Direct3D의 역할 이해 Direct3D에서 COM의 역할 이해 2차원 이미지의 저장방식, 페이지 전환, 깊이 버퍼링 Multi-Sampling 같은 그래픽 개념 성능 카운터 함수들을 이요해 고해상도 타이머 값을 얻기 Direct3D 초기화 Direct3D 12 개요 Direct3D는 GPU를 제어하는 저수준 Graphics API 3차원 그래픽 가속 기능을 이용해 3D World를 렌더링 가능 응용 프로그램과 그래픽 하드웨어 사이에 Direct3D라는 Interface를 통해 GPU에 명령을 주는데 Driver가 내부적으... ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>엔진 개발 05 - DirectX12 초기화 및 Log 시스템 업데이트</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-05---DirectX12-%EC%B4%88%EA%B8%B0%ED%99%94-%EB%B0%8F-Log-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EC%97%85%EB%8D%B0%EC%9D%B4%ED%8A%B8</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-05---DirectX12-%EC%B4%88%EA%B8%B0%ED%99%94-%EB%B0%8F-Log-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EC%97%85%EB%8D%B0%EC%9D%B4%ED%8A%B8</guid>
+    <description><![CDATA[ Log 시스템 Log 시스템에 LogLevel을 추가해 상황별로 Log를 출력할 수 있도록 변경 Message를 출력하기 전에 어떤 Level의 Message인지 추가로 출력할 수 있도록 수정했습니다. ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item><item>
+    <title>엔진 개발 04 - CPU와 GPU의 상호작용 - DirectX12</title>
+    <link>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-04---CPU%EC%99%80-GPU%EC%9D%98-%EC%83%81%ED%98%B8%EC%9E%91%EC%9A%A9---DirectX12</link>
+    <guid>https://jin-sukkim.github.io/Blog/content/Projects/JEngine---DX12/DirectX12/%EC%97%94%EC%A7%84-%EA%B0%9C%EB%B0%9C-04---CPU%EC%99%80-GPU%EC%9D%98-%EC%83%81%ED%98%B8%EC%9E%91%EC%9A%A9---DirectX12</guid>
+    <description><![CDATA[  CPU와 GPU를 모두 사용해 최적의 성능을 얻으려면 병렬로 사용하지만 중간중간 동기화도 필요함 이때 동기화는 병렬성을 망치기에 최소화해야 함 Command Queue와 Command List GPU에는 Command Queue가 있고 CPU는 렌더링 Command들을 Command List를 만들어 API를 통해 Queue에 제출함 중요한 점은 이 명령들을 GPU가 즉시 실행하는건 아니고 처리할 준비가 되어야지 실행되기 시작함 즉, GPU가 이전에 제출된 명령들을 처리하느라 바쁘면 명령들은 Queue에 그냥 남아있음 CPU가 명... ]]></description>
+    <pubDate>Sun, 09 Nov 2025 13:21:40 GMT</pubDate>
+  </item>
+    </channel>
+  </rss>
